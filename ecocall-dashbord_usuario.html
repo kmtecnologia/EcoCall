@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoCall — Painel do Usuário</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  
+  <!-- CSS estruturado e ordenado para consistência global -->
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/ecocall-dashboard.css">
+  <link rel="stylesheet" href="css/minhas-coletas.css">
+</head>
+<body class="dash-page">
+
+  <!-- Tela de Carregamento Global -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-spinner"></div>
+    <p>Carregando o seu painel...</p>
+  </div>
+
+  <div class="dash-layout">
+
+    <!-- ─── NAV LATERAL (SIDEBAR UNIFICADA) ─── -->
+    <aside class="sidebar">
+      <a href="ecocall-home.html" class="logo" onclick="transicaoPara('ecocall-home.html', event)">
+        <div class="logo-mark">
+          <img src="img/logo-folha.png" alt="EcoCall" width="36" height="36">
+        </div>
+        <div>
+          <div class="logo-name">EcoCall</div>
+          <div class="logo-tag">Painel do Usuário</div>
+        </div>
+      </a>
+
+      <!-- Menu de Navegação por Abas (SPA) -->
+      <nav class="sidebar-menu">
+        <a href="javascript:void(0)" class="nav-item active" data-tab="dash" onclick="switchUserTab('dash', this)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Painel</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-tab="coletas" onclick="switchUserTab('coletas', this)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <span>Minhas Coletas</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-tab="empresas" onclick="switchUserTab('empresas', this)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <span>Empresas Salvas</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-tab="mapa" onclick="switchUserTab('mapa', this)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          <span>Ver no Mapa</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-tab="historico" onclick="switchUserTab('historico', this)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Histórico</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-tab="perfil" onclick="switchUserTab('perfil', this)">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Meu Perfil</span>
+        </a>
+      </nav>
+
+      <!-- Rodapé da Sidebar Sincronizado -->
+      <div class="sidebar-footer">
+        <div class="avatar-mini" id="dash-sidebar-avatar">--</div>
+        <div class="user-meta">
+          <div class="user-name" id="dash-sidebar-name">Carregando…</div>
+          <div class="user-email" id="dash-sidebar-email">...</div>
+        </div>
+        <a href="javascript:void(0)" class="logout-trigger" onclick="logout(event)" title="Sair do painel">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ─── CONTEÚDO PRINCIPAL ─── -->
+    <main class="main-content">
+      
+      <!-- BARRA SUPERIOR (TOPBAR) -->
+      <header class="topbar">
+        <div class="topbar-welcome">
+          <h1 id="dash-greeting">Olá 👋</h1>
+          <p id="dash-topbar-sub">Gere e acompanhe as suas contribuições sustentáveis.</p>
+        </div>
+        
+        <div class="topbar-right">
+          <div class="user-location-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3ec96a" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="dash-topbar-city">Santos, SP</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-wrapper">
+
+        <!-- ==================== ABA 1: PAINEL / VISÃO GERAL ==================== -->
+        <div class="user-tab-content" id="tab-dash" style="display: block;">
+          <!-- BLOCO DE MÉTRICAS CADASTRAIS DA CONTA -->
+          <section class="metrics-grid">
+            <div class="metric-card">
+              <div class="m-top">
+                <span class="m-lbl">Coletas Concluídas</span>
+                <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+              </div>
+              <div class="m-value" id="dash-m-concluidas">0</div>
+              <div class="m-sub green">No seu histórico</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="m-top">
+                <span class="m-lbl">Pontos Acumulados</span>
+                <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+              </div>
+              <div class="m-value" id="dash-m-pontos">0 <span class="m-unit">pts</span></div>
+              <div class="m-sub green">+20 pts por coleta</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="m-top">
+                <span class="m-lbl">Massa Reciclada</span>
+                <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              </div>
+              <div class="m-value" id="dash-m-peso">0 <span class="m-unit">kg</span></div>
+              <div class="m-sub green" id="dash-m-co2">Impacto ecológico</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="m-top">
+                <span class="m-lbl">Empresas Parceiras</span>
+                <div class="m-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+              </div>
+              <div class="m-value" id="dash-m-empresas">0</div>
+              <div class="m-sub">Cadastradas</div>
+            </div>
+          </section>
+
+          <!-- SEÇÃO: TABELA DE ATIVIDADES RECENTES -->
+          <section class="table-section">
+            <div class="section-heading">
+              <h2>Coletas recentes</h2>
+              <a href="javascript:void(0)" class="link-view-all" onclick="switchUserTab('coletas')">Ver todas</a>
+            </div>
+            
+            <div class="responsive-table-holder">
+              <table class="coletas-table">
+                <thead>
+                  <tr>
+                    <th>Empresa de Coleta</th>
+                    <th>Tipo de Resíduo</th>
+                    <th>Data Agendada</th>
+                    <th>Estado</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-coletas-tbody">
+                  <!-- Preenchido via JS dinamicamente pelo MySQL -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- GRID INFERIOR SPLIT -->
+          <div class="lower-split-grid">
+            <div class="panel-card-box">
+              <div class="section-heading">
+                <h2>Empresas Disponíveis para Coleta</h2>
+              </div>
+              <div class="fav-companies-stack" id="dash-empresas-container">
+                <!-- Preenchido via JS dinamicamente pelo MySQL -->
+              </div>
+            </div>
+
+            <div class="cta-map-container">
+              <div class="cta-map-graphics">🌱</div>
+              <h3>Solicitar Nova Coleta</h3>
+              <p>Agende a retirada dos seus materiais recicláveis com uma empresa parceira.</p>
+              <button class="btn-action-map" onclick="switchUserTab('coletas'); openRequestModal();">Solicitar Coleta Agora</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ==================== ABA 2: MINHAS COLETAS ==================== -->
+        <div class="user-tab-content" id="tab-coletas" style="display: none;">
+          <!-- Barra de Filtros e Criação -->
+          <div class="filters-bar">
+            <div class="filters-bar-left">
+              <button class="filter-btn active" data-filter="all" onclick="setFilter(this,'all')">
+                <span class="filter-dot dot-all"></span> Todas
+              </button>
+              <button class="filter-btn" data-filter="done" onclick="setFilter(this,'done')">
+                <span class="filter-dot dot-done"></span> Concluídas
+              </button>
+              <button class="filter-btn" data-filter="sched" onclick="setFilter(this,'sched')">
+                <span class="filter-dot dot-sched"></span> Agendadas
+              </button>
+              <button class="filter-btn" data-filter="prog" onclick="setFilter(this,'prog')">
+                <span class="filter-dot dot-prog"></span> Em andamento
+              </button>
+              <button class="filter-btn" data-filter="cancel" onclick="setFilter(this,'cancel')">
+                <span class="filter-dot dot-cancel"></span> Canceladas
+              </button>
+            </div>
+            <select class="sort-select" onchange="sortCards(this.value)">
+              <option value="date-desc">Mais recentes</option>
+              <option value="date-asc">Mais antigas</option>
+              <option value="weight-desc">Maior massa</option>
+            </select>
+            <button class="btn-new-coleta" onclick="openRequestModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova coleta
+            </button>
+          </div>
+
+          <!-- Grade Dinâmica de Coletas (alimentada via MySQL API) -->
+          <div class="coletas-grid" id="coletas-grid"></div>
+
+          <!-- Estado Vazio (Fallback) -->
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <h3>Nenhuma coleta encontrada</h3>
+            <p>Tente outro filtro ou crie uma nova solicitação.</p>
+          </div>
+
+          <!-- Paginação -->
+          <div class="pagination" id="pagination">
+            <span class="pag-info" id="pag-info">Exibindo coletas</span>
+            <div class="pag-btns">
+              <button class="pag-btn" disabled>‹</button>
+              <button class="pag-btn active">1</button>
+              <button class="pag-btn" onclick="toast('Carregando página 2…')">2</button>
+              <button class="pag-btn" onclick="toast('Carregando página 3…')">›</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ==================== ABA 3: EMPRESAS SALVAS ==================== -->
+        <div class="user-tab-content" id="tab-empresas" style="display: none;">
+          <div class="panel-card-box">
+            <div class="section-heading" style="margin-bottom:1.5rem;">
+              <h2>Empresas Parceiras de Coleta</h2>
+            </div>
+            <div class="fav-companies-stack" id="tab-empresas-list">
+              <!-- Renderizado via JS -->
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ==================== ABA 4: VER NO MAPA ==================== -->
+        <div class="user-tab-content" id="tab-mapa" style="display: none;">
+          <div class="panel-card-box" style="padding:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+              <div>
+                <h2 style="font-size:1.3rem;">Mapa de Empresas e Pontos de Coleta 🗺️</h2>
+                <p style="color:var(--gray-600);font-size:0.88rem;margin-top:2px;">Localize cooperativas, ecopontos e empresas coletoras parceiras em Santos e Baixada Santista.</p>
+              </div>
+              <button class="btn-new-coleta" onclick="openRequestModal()">+ Chamar Coleta Residencial</button>
+            </div>
+            <div id="map-canvas" style="height:480px; width:100%; border-radius:16px; border:1px solid var(--gray-200); z-index:1;"></div>
+          </div>
+        </div>
+
+
+        <!-- ==================== ABA 5: HISTÓRICO ==================== -->
+        <div class="user-tab-content" id="tab-historico" style="display: none;">
+          <div class="panel-card-box">
+            <div class="section-heading" style="margin-bottom:1.5rem;">
+              <h2>Histórico de Atividades & Pontuação</h2>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1rem;" id="tab-historico-list">
+              <!-- Renderizado dinamicamente pelo MySQL -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== ABA 6: MEU PERFIL (INTEGRADO) ==================== -->
+        <div class="user-tab-content" id="tab-perfil" style="display: none;">
+          <div class="profile-grid">
+
+            <!-- Card Lateral do Perfil -->
+            <div class="profile-side-card">
+              <div class="profile-pic" id="usr-card-avatar">--</div>
+              <h3 id="usr-card-name">Carregando...</h3>
+              <p id="usr-card-email">...</p>
+              <button type="button" class="profile-pic-btn" onclick="toast('Foto do perfil sincronizada com sua conta.')">Trocar foto</button>
+
+              <div style="margin-top:1.6rem;text-align:left;display:flex;flex-direction:column;gap:.65rem;">
+                <div style="display:flex;justify-content:space-between;font-size:.84rem;">
+                  <span style="color:var(--text-grey);">Pontos acumulados</span>
+                  <strong id="usr-stat-pontos">0 pts</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:.84rem;">
+                  <span style="color:var(--text-grey);">Tipo de conta</span>
+                  <strong>Cidadão</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:.84rem;">
+                  <span style="color:var(--text-grey);">Membro desde</span>
+                  <strong id="usr-stat-membro">--/----</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Formulário de Edição do Perfil do Usuário -->
+            <div class="profile-form-card">
+              <h2 style="font-family:var(--font-syne);font-size:1.15rem;margin-bottom:1.2rem;">Seus Dados Cadastrais</h2>
+
+              <form id="usr-profile-form" onsubmit="salvarPerfilUsuario(event)">
+                
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>Nome Completo</label>
+                    <input type="text" id="usr-input-nome" placeholder="Digite seu nome completo" required>
+                  </div>
+                  <div class="form-field">
+                    <label>CPF</label>
+                    <input type="text" id="usr-input-cpf" placeholder="000.000.000-00">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>E-mail</label>
+                    <input type="email" id="usr-input-email" placeholder="seu@email.com" required>
+                  </div>
+                  <div class="form-field">
+                    <label>Telefone / WhatsApp</label>
+                    <input type="text" id="usr-input-telefone" placeholder="(13) 99999-9999">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>CEP</label>
+                    <input type="text" id="usr-input-cep" placeholder="00000-000">
+                  </div>
+                  <div class="form-field">
+                    <label>Cidade / UF</label>
+                    <div style="display:flex;gap:.5rem;">
+                      <input type="text" id="usr-input-cidade" placeholder="Cidade" style="flex:2;">
+                      <input type="text" id="usr-input-uf" placeholder="UF" maxlength="2" style="flex:1;text-transform:uppercase;">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field" style="flex:2;">
+                    <label>Logradouro / Rua</label>
+                    <input type="text" id="usr-input-logradouro" placeholder="Ex: Av. Ana Costa">
+                  </div>
+                  <div class="form-field" style="flex:1;">
+                    <label>Número</label>
+                    <input type="text" id="usr-input-numero" placeholder="150">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label>Bairro</label>
+                    <input type="text" id="usr-input-bairro" placeholder="Gonzaga">
+                  </div>
+                  <div class="form-field">
+                    <label>Complemento</label>
+                    <input type="text" id="usr-input-complemento" placeholder="Apto, Bloco, etc.">
+                  </div>
+                </div>
+
+                <!-- Seção de Alteração de Senha -->
+                <div style="margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid var(--border-light, #e0e0e0);">
+                  <h3 style="font-family:var(--font-syne);font-size:1rem;margin-bottom:0.8rem;color:var(--text-dark);">Alterar Senha de Acesso</h3>
+                  <p style="font-size:0.82rem;color:var(--text-grey);margin-bottom:1rem;">Preencha os campos abaixo apenas se desejar modificar a sua senha.</p>
+                  
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label>Nova Senha</label>
+                      <input type="password" id="usr-input-senha" placeholder="Mínimo de 6 caracteres">
+                    </div>
+                    <div class="form-field">
+                      <label>Confirmar Nova Senha</label>
+                      <input type="password" id="usr-input-senha-conf" placeholder="Repita a nova senha">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-actions" style="margin-top:1.5rem;">
+                  <button type="button" class="btn-cancel" onclick="carregarPerfilUsuario()">Descartar</button>
+                  <button type="submit" class="btn-save" id="usr-btn-save">Salvar alterações</button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Máscara de Fundo do Painel de Detalhes -->
+  <div class="overlay" id="overlay" onclick="closeDetail()"></div>
+
+  <!-- Painel Lateral Deslizante (Slide Panel de Detalhes da Coleta) -->
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <h3 id="dp-title">Detalhes da Coleta</h3>
+      <button class="close-panel" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-avatar-row">
+        <div class="coleta-avatar" id="dp-avatar">E</div>
+        <div>
+          <div class="detail-company-name" id="dp-company"></div>
+          <div class="detail-company-loc" id="dp-loc">📍 </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Informações da Coleta</div>
+        <div class="detail-row"><span class="detail-label">Nº do pedido</span><span class="detail-value" id="dp-id"></span></div>
+        <div class="detail-row"><span class="detail-label">Data agendada</span><span class="detail-value" id="dp-date"></span></div>
+        <div class="detail-row"><span class="detail-label">Resíduos</span><span class="detail-value" id="dp-tipos"></span></div>
+        <div class="detail-row"><span class="detail-label">Massa estimada</span><span class="detail-value" id="dp-weight"></span></div>
+        <div class="detail-row"><span class="detail-label">Status</span><span id="dp-badge"></span></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Ações Rápidas</div>
+        <div id="dp-actions" style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.5rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Máscara de Fundo do Modal de Solicitação -->
+  <div class="modal-overlay" id="req-overlay" onclick="closeRequestModal()"></div>
+
+  <!-- Modal de Solicitação de Coleta -->
+  <div class="request-modal" id="request-modal">
+    <div class="modal-header">
+      <div class="modal-title-group">
+        <h3>Solicitar Coleta Seletiva</h3>
+        <p>Agende a retirada dos seus materiais recicláveis com rastreamento.</p>
+      </div>
+      <button class="modal-close-btn" onclick="closeRequestModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- 1. Escolha da Empresa Parceira -->
+      <div class="req-field">
+        <label class="req-label">Empresa / Cooperativa de Coleta <span class="req-required">*</span></label>
+        <select id="req-empresa" onchange="onCompanySelectChange(this.value)">
+          <!-- Preenchido dinamicamente via JS -->
+        </select>
+        <div id="req-company-status" class="req-tip">Verificando materiais aceitos...</div>
+      </div>
+
+      <!-- 2. Tipos de Resíduo Aceitos -->
+      <div class="req-field">
+        <label class="req-label">Selecione os Materiais para Coleta <span class="req-required">*</span></label>
+        <div class="mat-chips-grid" id="req-materials-container">
+          <!-- Chips gerados dinamicamente com base na empresa -->
+        </div>
+      </div>
+
+      <!-- 3. Quantidade e Data -->
+      <div class="req-row-2">
+        <div class="req-field">
+          <label class="req-label">Massa Estimada (kg) <span class="req-required">*</span></label>
+          <input type="number" id="req-weight" min="1" max="500" value="10" placeholder="Ex: 10">
+        </div>
+        <div class="req-field">
+          <label class="req-label">Data Pretendida <span class="req-required">*</span></label>
+          <input type="date" id="req-date">
+        </div>
+      </div>
+
+      <div class="req-field">
+        <label class="req-label">Período de Atendimento</label>
+        <select id="req-turno">
+          <option value="Manhã (08h - 12h)">Manhã (08h - 12h)</option>
+          <option value="Tarde (13h - 18h)" selected>Tarde (13h - 18h)</option>
+          <option value="Noite (18h - 21h)">Noite (18h - 21h)</option>
+        </select>
+      </div>
+
+      <!-- 4. Endereço de Retirada Completo (ViaCEP & IBGE) -->
+      <div class="req-section-divider">
+        <span class="req-section-title">📍 Endereço de Retirada da Coleta</span>
+      </div>
+
+      <div class="req-row-2">
+        <div class="req-field">
+          <label class="req-label">CEP (Busca Automática) <span class="req-required">*</span></label>
+          <input type="text" id="req-cep" placeholder="00000-000" oninput="maskReqCEP(this); if(this.value.replace(/\D/g,'').length===8) buscarCEPReq();" onblur="buscarCEPReq()">
+        </div>
+        <div class="req-field">
+          <label class="req-label">Tipo de Logradouro</label>
+          <select id="req-tipo-logradouro">
+            <option value="Rua" selected>Rua</option>
+            <option value="Avenida">Avenida</option>
+            <option value="Alameda">Alameda</option>
+            <option value="Travessa">Travessa</option>
+            <option value="Praça">Praça</option>
+            <option value="Rodovia">Rodovia</option>
+            <option value="Estrada">Estrada</option>
+            <option value="Viela">Viela</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="req-row-2">
+        <div class="req-field">
+          <label class="req-label">Logradouro / Nome da Via <span class="req-required">*</span></label>
+          <input type="text" id="req-logradouro" placeholder="Ex: Ana Costa">
+        </div>
+        <div class="req-field">
+          <label class="req-label">Número <span class="req-required">*</span></label>
+          <input type="text" id="req-numero" placeholder="Ex: 150">
+        </div>
+      </div>
+
+      <div class="req-row-2">
+        <div class="req-field">
+          <label class="req-label">Complemento</label>
+          <input type="text" id="req-complemento" placeholder="Ex: Apto 42, Bloco B">
+        </div>
+        <div class="req-field">
+          <label class="req-label">Bairro <span class="req-required">*</span></label>
+          <input type="text" id="req-bairro" placeholder="Ex: Gonzaga">
+        </div>
+      </div>
+
+      <div class="req-row-2">
+        <div class="req-field">
+          <label class="req-label">Estado (UF) <span class="req-required">*</span></label>
+          <select id="req-uf" onchange="carregarCidadesReq()">
+            <option value="">UF</option>
+            <option value="AC">AC - Acre</option>
+            <option value="AL">AL - Alagoas</option>
+            <option value="AP">AP - Amapá</option>
+            <option value="AM">AM - Amazonas</option>
+            <option value="BA">BA - Bahia</option>
+            <option value="CE">CE - Ceará</option>
+            <option value="DF">DF - Distrito Federal</option>
+            <option value="ES">ES - Espírito Santo</option>
+            <option value="GO">GO - Goiás</option>
+            <option value="MA">MA - Maranhão</option>
+            <option value="MT">MT - Mato Grosso</option>
+            <option value="MS">MS - Mato Grosso do Sul</option>
+            <option value="MG">MG - Minas Gerais</option>
+            <option value="PA">PA - Pará</option>
+            <option value="PB">PB - Paraíba</option>
+            <option value="PR">PR - Paraná</option>
+            <option value="PE">PE - Pernambuco</option>
+            <option value="PI">PI - Piauí</option>
+            <option value="RJ">RJ - Rio de Janeiro</option>
+            <option value="RN">RN - Rio Grande do Norte</option>
+            <option value="RS">RS - Rio Grande do Sul</option>
+            <option value="RO">RO - Rondônia</option>
+            <option value="RR">RR - Roraima</option>
+            <option value="SC">SC - Santa Catarina</option>
+            <option value="SP" selected>SP - São Paulo</option>
+            <option value="SE">SE - Sergipe</option>
+            <option value="TO">TO - Tocantins</option>
+          </select>
+        </div>
+        <div class="req-field">
+          <label class="req-label">Cidade <span class="req-required">*</span></label>
+          <select id="req-cidade">
+            <option value="Santos" selected>Santos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 5. Observações -->
+      <div class="req-field">
+        <label class="req-label">Instruções / Observações para a Equipe</label>
+        <textarea id="req-notes" rows="2" placeholder="Ex: Deixarei os sacos identificados na recepção do prédio."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeRequestModal()">Cancelar</button>
+      <button class="btn-submit-modal" onclick="submitCollectionRequest()">Confirmar Solicitação →</button>
+    </div>
+  </div>
+
+  <!-- Modal de Avaliação de Coletas Concluídas -->
+  <div class="modal-overlay" id="eval-overlay" onclick="closeEvalModal()"></div>
+  <div class="request-modal" id="eval-modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title-group">
+        <h3>Avaliar Coleta Seletiva ⭐</h3>
+        <p id="eval-modal-sub">Dê sua nota e feedback sobre o serviço prestado.</p>
+      </div>
+      <button class="modal-close-btn" onclick="closeEvalModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:1.5rem;">
+      <input type="hidden" id="eval-coleta-id">
+      <div style="text-align:center;margin-bottom:1.2rem;">
+        <div style="font-size:0.95rem;color:var(--text-dark);font-weight:600;margin-bottom:0.5rem;" id="eval-empresa-name">Empresa Parceira</div>
+        <div id="eval-stars-picker" style="font-size:2.2rem;cursor:pointer;color:#f59e0b;user-select:none;letter-spacing:4px;">
+          <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
+        </div>
+        <div style="font-size:0.85rem;font-weight:600;color:var(--g700);margin-top:4px;" id="eval-rating-lbl">5 estrelas (Excelente)</div>
+      </div>
+      <div class="req-field">
+        <label class="req-label">Seu Comentário / Experiência</label>
+        <textarea id="eval-comment" rows="3" placeholder="Conte como foi a pontualidade, atendimento e recolhimento dos resíduos..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeEvalModal()">Cancelar</button>
+      <button class="btn-submit-modal" onclick="submitEvaluation()">Enviar Avaliação (+10 pts) →</button>
+    </div>
+  </div>
+
+  <!-- Componente Flutuante de Notificação Toast -->
+  <div class="toast" id="toast">
+    <div class="tdot"></div>
+    <span id="tmsg"></span>
+  </div>
+
+  <!-- Inicializadores de Script & Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/ecocall-dashboard.js"></script>
+</body>
+</html>
