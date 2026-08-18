@@ -61,7 +61,7 @@ function getDBConnection() {
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     conta_id INT DEFAULT NULL,
                     identificador VARCHAR(150) NOT NULL,
-                    metodo ENUM('email', 'sms') NOT NULL DEFAULT 'email',
+                    metodo ENUM('email', 'whatsapp', 'sms') NOT NULL DEFAULT 'email',
                     codigo VARCHAR(10) NOT NULL,
                     tipo_conta ENUM('user', 'empresa') NOT NULL DEFAULT 'user',
                     utilizado TINYINT(1) NOT NULL DEFAULT 0,
@@ -70,6 +70,7 @@ function getDBConnection() {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
             $pdo->exec("ALTER TABLE password_resets ADD COLUMN conta_id INT DEFAULT NULL");
+            $pdo->exec("ALTER TABLE password_resets MODIFY COLUMN metodo ENUM('email', 'whatsapp', 'sms') NOT NULL DEFAULT 'email'");
         } catch (Exception $ex) {}
 
         return $pdo;

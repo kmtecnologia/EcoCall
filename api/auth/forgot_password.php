@@ -1,7 +1,7 @@
 <?php
 /* ==========================================================================
    EcoCall — Endpoint API: Solicitar Código de Recuperação de Senha (POST /api/auth/forgot_password.php)
-   Suporte multi-canal: Recuperação por E-mail ou por Telefone / Celular (SMS / WhatsApp)
+   Canais Oficiais: Recuperação via E-mail ou via WhatsApp Direto
    ========================================================================== */
 
 require_once __DIR__ . '/../config/db.php';
@@ -16,10 +16,11 @@ $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true) ?: $_POST;
 
 $identificador = trim($data['identificador'] ?? $data['email'] ?? $data['telefone'] ?? '');
-$metodo = strtolower(trim($data['metodo'] ?? 'email')) === 'sms' ? 'sms' : 'email';
+$rawMetodo = strtolower(trim($data['metodo'] ?? 'email'));
+$metodo = ($rawMetodo === 'whatsapp' || $rawMetodo === 'sms' || $rawMetodo === 'celular') ? 'whatsapp' : 'email';
 
 if (empty($identificador)) {
-    sendJsonResponse(['error' => 'Por favor, informe seu e-mail ou número de telefone/celular.'], 400);
+    sendJsonResponse(['error' => 'Por favor, informe seu e-mail ou número de WhatsApp com DDD.'], 400);
 }
 
 $pdo = getDBConnection();
@@ -52,10 +53,10 @@ if ($metodo === 'email') {
         }
     }
 } else {
-    // Método SMS / Telefone: normaliza apenas dígitos numéricos
+    // Método WhatsApp: normaliza dígitos numéricos
     $cleanTel = preg_replace('/\D/', '', $identificador);
     if (strlen($cleanTel) < 8) {
-        sendJsonResponse(['error' => 'Por favor, informe um número de telefone/celular válido com DDD.'], 400);
+        sendJsonResponse(['error' => 'Por favor, informe um número de WhatsApp válido com DDD.'], 400);
     }
 
     // Remove prefixo de DDI 55 (Brasil) se houver
@@ -120,7 +121,7 @@ if ($metodo === 'email') {
 
 if (!$contaEncontrada) {
     sendJsonResponse([
-        'error' => 'Nenhuma conta de cidadão ou empresa foi encontrada com o ' . ($metodo === 'email' ? 'e-mail' : 'número de celular') . ' informado.'
+        'error' => 'Nenhuma conta de cidadão ou empresa foi encontrada com o ' . ($metodo === 'email' ? 'e-mail' : 'número de WhatsApp') . ' informado.'
     ], 404);
 }
 
@@ -170,6 +171,7 @@ $emailEnviado = false;
 $emailError = null;
 $emailProvider = 'smtp';
 $emailNotificadoMascarado = '';
+$whatsappLink = null;
 
 // Mascara e-mail cadastrado
 if (!empty($contaEmail)) {
@@ -208,22 +210,18 @@ if ($metodo === 'email') {
         $destinoMascarado = substr($contaTelefone, 0, 4) . '****' . substr($contaTelefone, -3);
     }
 
-    // DISPARO VIA MOTOR DE SMS / WHATSAPP:
-    $envioSms = enviarSMS($contaTelefone, $codigo, $contaNome);
-    $smsEnviado = $envioSms['success'] ?? false;
-    $smsProvider = $envioSms['provider'] ?? 'simulado';
-    $smsError = $envioSms['error'] ?? null;
-    $whatsappLink = $envioSms['whatsapp_link'] ?? null;
-    $smsSimulado = $envioSms['simulado'] ?? false;
+    // DISPARO WHATSAPP:
+    $envioMsg = enviarSMS($contaTelefone, $codigo, $contaNome);
+    $whatsappLink = $envioMsg['whatsapp_link'] ?? null;
 
     // DISPARO MULTI-CANAL SEGURO:
     // Envia também uma cópia imediata para o e-mail cadastrado da conta como garantia
-    $assunto = "EcoCall - Código de Recuperação de Senha (Celular / SMS)";
+    $assunto = "EcoCall - Código de Recuperação de Senha (WhatsApp)";
     $mensagemHtml = "<p>Olá, <strong>{$contaNome}</strong>!</p>
-                     <p>Recebemos uma solicitação de recuperação de senha para a sua conta associada ao telefone <strong>{$destinoMascarado}</strong>.</p>
+                     <p>Recebemos uma solicitação de recuperação de senha para a sua conta associada ao WhatsApp <strong>{$destinoMascarado}</strong>.</p>
                      <p>Para sua conveniência e segurança, enviamos o código de verificação de 6 dígitos:</p>";
 
-    $corpo = gerarTemplateEmailEcoCall("Código de Verificação SMS / Celular", $mensagemHtml, null, null, $codigo);
+    $corpo = gerarTemplateEmailEcoCall("Código de Verificação WhatsApp", $mensagemHtml, null, null, $codigo);
     $envio = enviarEmail($contaEmail, $contaNome, $assunto, $corpo);
 
     $emailEnviado = $envio['success'];
@@ -233,7 +231,7 @@ if ($metodo === 'email') {
 
 sendJsonResponse([
     'success' => true,
-    'message' => 'Código de verificação de 6 dígitos gerado e enviado com sucesso!',
+    'message' => 'Código de verificação de 6 dígitos gerado com sucesso!',
     'metodo' => $metodo,
     'destino_mascarado' => $destinoMascarado,
     'email_backup_mascarado' => $emailNotificadoMascarado,
@@ -241,10 +239,6 @@ sendJsonResponse([
     'email_enviado' => $emailEnviado,
     'email_provider' => $emailProvider,
     'email_error' => $emailError,
-    'sms_enviado' => $smsEnviado ?? false,
-    'sms_provider' => $smsProvider ?? null,
-    'sms_simulado' => $smsSimulado ?? false,
-    'sms_error' => $smsError ?? null,
-    'whatsapp_link' => $whatsappLink ?? null,
+    'whatsapp_link' => $whatsappLink,
     'preview_codigo' => $codigo // Fornecido para teste em ambiente local / simulação
 ]);

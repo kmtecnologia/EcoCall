@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     conta_id INT DEFAULT NULL,
     identificador VARCHAR(150) NOT NULL,
-    metodo ENUM('email', 'sms') NOT NULL DEFAULT 'email',
+    metodo ENUM('email', 'whatsapp', 'sms') NOT NULL DEFAULT 'email',
     codigo VARCHAR(10) NOT NULL,
     tipo_conta ENUM('user', 'empresa') NOT NULL DEFAULT 'user',
     utilizado TINYINT(1) NOT NULL DEFAULT 0,

@@ -111,17 +111,17 @@
   }
 
   function setForgotMethod(method) {
-    currentForgotMethod = method;
+    currentForgotMethod = method === 'sms' ? 'whatsapp' : method;
     var btnEmail = document.getElementById('btn-method-email');
-    var btnSms = document.getElementById('btn-method-sms');
+    var btnWhatsapp = document.getElementById('btn-method-whatsapp') || document.getElementById('btn-method-sms');
     var lbl = document.getElementById('lbl-forgot-identificador');
     var input = document.getElementById('forgot-identificador');
 
     if (input) input.value = '';
 
-    if (method === 'email') {
+    if (currentForgotMethod === 'email') {
       if (btnEmail) btnEmail.classList.add('active');
-      if (btnSms) btnSms.classList.remove('active');
+      if (btnWhatsapp) btnWhatsapp.classList.remove('active');
       if (lbl) lbl.textContent = 'E-mail Cadastrado';
       if (input) {
         input.placeholder = 'Digite seu e-mail cadastrado';
@@ -129,8 +129,8 @@
       }
     } else {
       if (btnEmail) btnEmail.classList.remove('active');
-      if (btnSms) btnSms.classList.add('active');
-      if (lbl) lbl.textContent = 'WhatsApp / Celular (com DDD)';
+      if (btnWhatsapp) btnWhatsapp.classList.add('active');
+      if (lbl) lbl.textContent = 'Número do WhatsApp (com DDD)';
       if (input) {
         input.placeholder = 'Ex: (13) 99610-8189';
         input.type = 'tel';
@@ -143,15 +143,15 @@
     var input = document.getElementById('forgot-identificador');
     var idVal = input ? input.value.trim() : '';
     if (!idVal) {
-      showToast('⚠ Informe seu ' + (currentForgotMethod === 'email' ? 'e-mail' : 'celular com DDD') + ' cadastrado.');
+      showToast('⚠ Informe seu ' + (currentForgotMethod === 'email' ? 'e-mail' : 'número de WhatsApp com DDD') + ' cadastrado.');
       if (input) input.focus();
       return;
     }
 
-    if (currentForgotMethod === 'sms') {
+    if (currentForgotMethod !== 'email') {
       var digits = idVal.replace(/\D/g, '');
       if (digits.length < 8) {
-        showToast('⚠ Digite um número de celular válido com DDD.');
+        showToast('⚠ Digite um número de WhatsApp válido com DDD.');
         if (input) input.focus();
         return;
       }
@@ -163,7 +163,7 @@
       btn.textContent = 'Enviando código...';
     }
 
-    showToast('Enviando código de verificação...');
+    showToast('Gerando código de verificação...');
 
     window.apiFetch('api/auth/forgot_password.php', {
       method: 'POST',
@@ -179,7 +179,7 @@
 
       if (res && res.success) {
         lastSentIdentificador = res.identificador || idVal;
-        showToast('✓ ' + (res.message || 'Código enviado com sucesso!'));
+        showToast('✓ ' + (res.message || 'Código gerado com sucesso!'));
 
         var step1 = document.getElementById('forgot-step-1');
         var step2 = document.getElementById('forgot-step-2');
@@ -187,11 +187,12 @@
         var codeInput = document.getElementById('forgot-code');
 
         if (msgEl) {
+          var isWhatsApp = res.metodo === 'whatsapp' || res.metodo === 'sms';
           var htmlMsg = 'Código de 6 dígitos gerado para <strong>' + (res.destino_mascarado || idVal) + '</strong>.';
-          if (res.email_backup_mascarado && res.metodo === 'sms') {
+          if (res.email_backup_mascarado && isWhatsApp) {
             htmlMsg += '<br><span style="font-size:0.8rem;color:#a3c4b0;">Enviado também para seu e-mail cadastrado <strong>' + res.email_backup_mascarado + '</strong>.</span>';
           }
-          if (res.whatsapp_link && res.metodo === 'sms') {
+          if (res.whatsapp_link && isWhatsApp) {
             htmlMsg += '<div style="margin-top:12px;margin-bottom:8px;">' +
               '<a href="' + res.whatsapp_link + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#ffffff;padding:10px 16px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;box-shadow:0 4px 12px rgba(37,211,102,0.3);width:100%;box-sizing:border-box;transition:0.2s ease;">' +
               '💬 Abrir WhatsApp para ver o Código' +
