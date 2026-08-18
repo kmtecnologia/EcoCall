@@ -130,9 +130,9 @@
     } else {
       if (btnEmail) btnEmail.classList.remove('active');
       if (btnSms) btnSms.classList.add('active');
-      if (lbl) lbl.textContent = 'Celular / WhatsApp Cadastrado';
+      if (lbl) lbl.textContent = 'WhatsApp / Celular (com DDD)';
       if (input) {
-        input.placeholder = 'Ex: (13) 99876-5432';
+        input.placeholder = 'Ex: (13) 99610-8189';
         input.type = 'tel';
       }
     }
