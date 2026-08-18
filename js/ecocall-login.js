@@ -191,8 +191,11 @@
           if (res.email_backup_mascarado && res.metodo === 'sms') {
             htmlMsg += '<br><span style="font-size:0.8rem;color:#a3c4b0;">Enviado também para seu e-mail cadastrado <strong>' + res.email_backup_mascarado + '</strong>.</span>';
           }
+          if (res.whatsapp_link && res.metodo === 'sms') {
+            htmlMsg += '<div style="margin-top:8px;"><a href="' + res.whatsapp_link + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.82rem;font-weight:600;">💬 Receber / Abrir no WhatsApp</a></div>';
+          }
           if (res.preview_codigo) {
-            htmlMsg += '<br><small style="color:#52d67b;font-weight:600;">Código de teste: ' + res.preview_codigo + '</small>';
+            htmlMsg += '<div style="margin-top:6px;"><small style="color:#52d67b;font-weight:600;">Código de verificação: ' + res.preview_codigo + '</small></div>';
           }
           msgEl.innerHTML = htmlMsg;
         }

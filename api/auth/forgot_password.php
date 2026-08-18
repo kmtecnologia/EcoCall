@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/mailer.php';
+require_once __DIR__ . '/../config/sms.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJsonResponse(['error' => 'Método não permitido.'], 405);
@@ -207,6 +208,14 @@ if ($metodo === 'email') {
         $destinoMascarado = substr($contaTelefone, 0, 4) . '****' . substr($contaTelefone, -3);
     }
 
+    // DISPARO VIA MOTOR DE SMS / WHATSAPP:
+    $envioSms = enviarSMS($contaTelefone, $codigo, $contaNome);
+    $smsEnviado = $envioSms['success'] ?? false;
+    $smsProvider = $envioSms['provider'] ?? 'simulado';
+    $smsError = $envioSms['error'] ?? null;
+    $whatsappLink = $envioSms['whatsapp_link'] ?? null;
+    $smsSimulado = $envioSms['simulado'] ?? false;
+
     // DISPARO MULTI-CANAL SEGURO:
     // Envia também uma cópia imediata para o e-mail cadastrado da conta como garantia
     $assunto = "EcoCall - Código de Recuperação de Senha (Celular / SMS)";
@@ -232,5 +241,10 @@ sendJsonResponse([
     'email_enviado' => $emailEnviado,
     'email_provider' => $emailProvider,
     'email_error' => $emailError,
+    'sms_enviado' => $smsEnviado ?? false,
+    'sms_provider' => $smsProvider ?? null,
+    'sms_simulado' => $smsSimulado ?? false,
+    'sms_error' => $smsError ?? null,
+    'whatsapp_link' => $whatsappLink ?? null,
     'preview_codigo' => $codigo // Fornecido para teste em ambiente local / simulação
 ]);
