@@ -1063,9 +1063,37 @@
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
+.btn-addr-tab.disabled-tab {
+  opacity: 0.6;
+  background: #f1f5f2;
+  color: #8fa396;
+  cursor: not-allowed;
+}
+
 .btn-addr-tab .tab-icon {
   font-size: 1.05rem;
   line-height: 1;
+}
+
+.req-addr-alert-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  background: #fffbeb;
+  border: 1.5px solid #fcd34d;
+  color: #92400e;
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0.2rem 0 0.8rem 0;
+  animation: fadeInReqAddr 0.25s ease forwards;
+}
+
+.req-addr-alert-warning .alert-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .req-addr-badge {

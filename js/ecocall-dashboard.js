@@ -782,6 +782,32 @@
   var userRegisteredAddress = null;
   var isCustomAddressMode = false;
 
+  function ehEnderecoDeSantos(addr) {
+    if (!addr) return false;
+    var cidade = (addr.cidade || '').trim().toLowerCase();
+    var uf = (addr.uf || '').trim().toUpperCase();
+    var cep = (addr.cep || '').replace(/\D/g, '');
+    var endereco = (addr.endereco || '').toLowerCase();
+
+    // Se o CEP for de Santos (faixa 11000 a 11099)
+    if (cep.length === 8 && cep.startsWith('110')) {
+      return true;
+    }
+    // Se a cidade for explicitamente Santos
+    if (cidade === 'santos') {
+      return uf === 'sp' || uf === '';
+    }
+    // Se a string de endereço contiver Santos
+    if (endereco.includes('santos') && (uf === 'sp' || uf === '')) {
+      return true;
+    }
+    // Se não tiver cidade preenchida mas tiver logradouro/bairro padrão
+    if (!cidade && (addr.logradouro || addr.bairro) && (uf === 'sp' || !uf)) {
+      return true;
+    }
+    return false;
+  }
+
   function obterDadosEnderecoUsuario() {
     try {
       var stored = sessionStorage.getItem('ecocall_user');
@@ -795,7 +821,8 @@
           complemento: u.complemento || '',
           bairro: u.bairro || '',
           cidade: u.cidade || 'Santos',
-          uf: u.uf || 'SP'
+          uf: u.uf || 'SP',
+          endereco: u.endereco || ''
         };
       }
     } catch(e) {}
@@ -810,18 +837,13 @@
     if (addr.numero !== undefined) setVal('req-numero', addr.numero);
     if (addr.complemento !== undefined) setVal('req-complemento', addr.complemento);
     if (addr.bairro !== undefined) setVal('req-bairro', addr.bairro);
-    if (addr.cidade !== undefined) setVal('req-cidade', addr.cidade || 'Santos');
-    if (addr.uf !== undefined) {
-      setVal('req-uf', addr.uf || 'SP');
-      if (addr.cidade) {
-        carregarCidadesReq(addr.cidade);
-      }
-    }
+    setVal('req-cidade', 'Santos');
+    setVal('req-uf', 'SP');
   }
 
   function formatarEnderecoLegivel(addr) {
     if (!addr || (!addr.logradouro && !addr.cep && !addr.bairro)) {
-      return 'Nenhum endereço cadastrado no seu perfil ainda. Clique abaixo para preencher.';
+      return 'Nenhum endereço cadastrado no seu perfil ainda. Clique em "Outros" para preencher um endereço em Santos.';
     }
     var tipo = addr.tipo_logradouro ? addr.tipo_logradouro + ' ' : '';
     var log = addr.logradouro ? (addr.logradouro.toLowerCase().startsWith(tipo.trim().toLowerCase()) ? addr.logradouro : tipo + addr.logradouro) : 'Endereço sem logradouro';
@@ -841,21 +863,45 @@
     var customForm = document.getElementById('req-addr-custom-form');
     var badge = document.getElementById('req-addr-status-badge');
     var previewText = document.getElementById('req-addr-preview-text');
+    var alertForaSantos = document.getElementById('req-addr-fora-santos-alert');
+    var cidadeOrigemSpan = document.getElementById('req-addr-cidade-origem');
 
     userRegisteredAddress = obterDadosEnderecoUsuario();
     var temEnderecoCadastrado = userRegisteredAddress && (userRegisteredAddress.logradouro || userRegisteredAddress.cep || userRegisteredAddress.bairro);
+    var ehDeSantos = ehEnderecoDeSantos(userRegisteredAddress);
 
     if (previewText && userRegisteredAddress) {
       previewText.textContent = formatarEnderecoLegivel(userRegisteredAddress);
     }
 
-    if (isCustomAddressMode || !temEnderecoCadastrado) {
+    // Se o endereço residencial for fora de Santos, exibe alerta explicativo
+    if (!ehDeSantos && temEnderecoCadastrado) {
+      if (alertForaSantos) alertForaSantos.style.display = 'flex';
+      if (cidadeOrigemSpan) {
+        var cidNome = userRegisteredAddress.cidade || 'Outro Município';
+        var ufNome = userRegisteredAddress.uf ? '/' + userRegisteredAddress.uf : '';
+        cidadeOrigemSpan.textContent = cidNome + ufNome;
+      }
+      if (tabResidencial) {
+        tabResidencial.classList.add('disabled-tab');
+        tabResidencial.title = 'Endereço residencial fora de Santos/SP';
+      }
+    } else {
+      if (alertForaSantos) alertForaSantos.style.display = 'none';
+      if (tabResidencial) {
+        tabResidencial.classList.remove('disabled-tab');
+        tabResidencial.title = '';
+      }
+    }
+
+    // Se não for de Santos ou estiver no modo customizado, força formulário Outros
+    if (isCustomAddressMode || !temEnderecoCadastrado || !ehDeSantos) {
       if (tabResidencial) tabResidencial.classList.remove('active');
       if (tabOutros) tabOutros.classList.add('active');
       if (regCard) regCard.style.display = 'none';
       if (customForm) customForm.style.display = 'block';
       if (badge) {
-        badge.textContent = '📍 Outro Endereço';
+        badge.textContent = '📍 Outro Endereço (Santos/SP)';
         badge.className = 'req-addr-badge badge-custom';
       }
     } else {
@@ -864,7 +910,7 @@
       if (regCard) regCard.style.display = 'block';
       if (customForm) customForm.style.display = 'none';
       if (badge) {
-        badge.textContent = '✓ Endereço Residencial';
+        badge.textContent = '✓ Endereço Residencial (Santos)';
         badge.className = 'req-addr-badge badge-default';
       }
       preencherInputsEndereco(userRegisteredAddress);
@@ -872,23 +918,33 @@
   }
 
   function selecionarTipoEndereco(tipo) {
-    if (tipo === 'outros') {
-      isCustomAddressMode = true;
-      atualizarVisualizacaoEnderecoModal();
-      var cepInput = document.getElementById('req-cep');
-      if (cepInput) cepInput.focus();
-      window.toast('📍 Modo "Outros" selecionado. Digite o endereço ou consulte pelo CEP.');
-    } else {
-      userRegisteredAddress = obterDadosEnderecoUsuario();
+    userRegisteredAddress = obterDadosEnderecoUsuario();
+    var ehDeSantos = ehEnderecoDeSantos(userRegisteredAddress);
+
+    if (tipo === 'residencial') {
       if (!userRegisteredAddress || (!userRegisteredAddress.logradouro && !userRegisteredAddress.cep)) {
         window.toast('⚠ Você ainda não possui endereço residencial no perfil. Preencha os campos abaixo.');
+        selecionarTipoEndereco('outros');
+        return;
+      }
+      if (!ehDeSantos) {
+        var cidNome = userRegisteredAddress.cidade || 'outra cidade';
+        var ufNome = userRegisteredAddress.uf ? '/' + userRegisteredAddress.uf : '';
+        window.toast('❌ O EcoCall opera exclusivamente no município de Santos/SP. Como seu endereço cadastrado é em ' + cidNome + ufNome + ', informe obrigatoriamente um endereço em Santos no modo "Outros".');
         selecionarTipoEndereco('outros');
         return;
       }
       isCustomAddressMode = false;
       preencherInputsEndereco(userRegisteredAddress);
       atualizarVisualizacaoEnderecoModal();
-      window.toast('🏠 Endereço residencial selecionado como padrão.');
+      window.toast('🏠 Endereço residencial de Santos selecionado como padrão.');
+    } else {
+      // outros
+      isCustomAddressMode = true;
+      atualizarVisualizacaoEnderecoModal();
+      var cepInput = document.getElementById('req-cep');
+      if (cepInput) cepInput.focus();
+      window.toast('📍 Modo "Outros" selecionado. Digite o endereço ou consulte pelo CEP de Santos.');
     }
   }
 
@@ -916,24 +972,30 @@
 
     carregarEmpresasNoSelect();
 
-    // Conecta com o endereço já cadastrado do usuário como padrão
-    userRegisteredAddress = obterDadosEnderecoUsuario();
-    var temEndereco = userRegisteredAddress && (userRegisteredAddress.logradouro || userRegisteredAddress.cep || userRegisteredAddress.bairro);
-    
-    isCustomAddressMode = !temEndereco;
-    preencherInputsEndereco(userRegisteredAddress);
-    atualizarVisualizacaoEnderecoModal();
+    function aplicarDadosEnderecoModal() {
+      userRegisteredAddress = obterDadosEnderecoUsuario();
+      var temEndereco = userRegisteredAddress && (userRegisteredAddress.logradouro || userRegisteredAddress.cep || userRegisteredAddress.bairro);
+      var ehDeSantos = ehEnderecoDeSantos(userRegisteredAddress);
 
-    // Sincroniza em segundo plano com a API para garantir dados atualizados
+      if (!temEndereco || !ehDeSantos) {
+        isCustomAddressMode = true;
+        setVal('req-uf', 'SP');
+        setVal('req-cidade', 'Santos');
+      } else {
+        isCustomAddressMode = false;
+        preencherInputsEndereco(userRegisteredAddress);
+      }
+      atualizarVisualizacaoEnderecoModal();
+    }
+
+    aplicarDadosEnderecoModal();
+
+    // Sincroniza em segundo plano com a API para garantir dados mais recentes e atualiza o modal
     if (window.apiFetch) {
       window.apiFetch('api/auth/me.php').then(function (res) {
         if (res && res.authenticated && res.user) {
           try { sessionStorage.setItem('ecocall_user', JSON.stringify(res.user)); } catch(e) {}
-          userRegisteredAddress = obterDadosEnderecoUsuario();
-          if (!isCustomAddressMode) {
-            preencherInputsEndereco(userRegisteredAddress);
-            atualizarVisualizacaoEnderecoModal();
-          }
+          aplicarDadosEnderecoModal();
         }
       }).catch(function() {});
     }
@@ -947,7 +1009,7 @@
   }
 
   /* ==========================================================================
-     10. INTEGRAÇÃO VIACEP E IBGE
+     10. INTEGRAÇÃO VIACEP E VALIDAÇÃO EXCLUSIVA SANTOS/SP
      ========================================================================== */
   function maskReqCEP(input) {
     var v = input.value.replace(/\D/g, '');
@@ -966,29 +1028,38 @@
       return;
     }
 
-    window.toast('🔍 Buscando endereço pelo CEP...');
+    window.toast('🔍 Consultando CEP...');
 
     fetch('https://viacep.com.br/ws/' + cep + '/json/')
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data.erro) {
-          window.toast('❌ CEP não encontrado. Preencha o endereço manualmente.');
+          window.toast('❌ CEP não encontrado. Verifique o número digitado.');
+          return;
+        }
+
+        var localidade = (data.localidade || '').trim().toLowerCase();
+        var uf = (data.uf || '').trim().toUpperCase();
+
+        if (localidade !== 'santos' || uf !== 'SP') {
+          window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP ' + cep + ' pertence a ' + data.localidade + '/' + data.uf + '. Por favor, informe um CEP de Santos (11000 a 11099).');
+          setVal('req-cep', '');
+          setVal('req-logradouro', '');
+          setVal('req-bairro', '');
+          setVal('req-numero', '');
+          if (cepInput) cepInput.focus();
           return;
         }
 
         setVal('req-logradouro', data.logradouro);
         setVal('req-bairro', data.bairro);
-
-        var ufSelect = document.getElementById('req-uf');
-        if (ufSelect && data.uf) {
-          ufSelect.value = data.uf;
-          carregarCidadesReq(data.localidade);
-        }
+        setVal('req-uf', 'SP');
+        setVal('req-cidade', 'Santos');
 
         var numInput = document.getElementById('req-numero');
         if (numInput) numInput.focus();
 
-        window.toast('✅ Endereço preenchido com sucesso!');
+        window.toast('✅ Endereço em Santos/SP identificado com sucesso!');
       })
       .catch(function () {
         window.toast('⚠ Falha ao consultar o CEP. Preencha manualmente.');
@@ -996,35 +1067,8 @@
   }
 
   function carregarCidadesReq(cidadePadrao) {
-    var ufEl = document.getElementById('req-uf');
-    var cidadeEl = document.getElementById('req-cidade');
-    if (!ufEl || !cidadeEl) return;
-
-    var uf = ufEl.value;
-    if (!uf) {
-      cidadeEl.innerHTML = '<option value="">Selecione primeiro a UF</option>';
-      return;
-    }
-
-    cidadeEl.innerHTML = '<option value="">Carregando cidades...</option>';
-
-    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados/' + uf + '/municipios?orderBy=nome')
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        cidadeEl.innerHTML = '<option value="">Selecione a Cidade</option>';
-        data.forEach(function (mun) {
-          var opt = document.createElement('option');
-          opt.value = mun.nome;
-          opt.textContent = mun.nome;
-          if (cidadePadrao && (mun.nome.toLowerCase() === cidadePadrao.toLowerCase())) {
-            opt.selected = true;
-          }
-          cidadeEl.appendChild(opt);
-        });
-      })
-      .catch(function () {
-        cidadeEl.innerHTML = '<option value="Santos" selected>Santos</option>';
-      });
+    setVal('req-uf', 'SP');
+    setVal('req-cidade', 'Santos');
   }
 
   /* ==========================================================================
@@ -1064,12 +1108,18 @@
     var uf = (document.getElementById('req-uf') || {}).value || 'SP';
     var cidade = (document.getElementById('req-cidade') || {}).value || 'Santos';
 
+    if (!isCustomAddressMode && !ehEnderecoDeSantos(userRegisteredAddress)) {
+      window.toast('❌ Seu endereço residencial cadastrado não pertence ao município de Santos/SP. Alterne para o modo "Outros" para agendar em Santos.');
+      selecionarTipoEndereco('outros');
+      return;
+    }
+
     if (!logradouro || !numero || !bairro) {
       if (!isCustomAddressMode) {
-        window.toast('⚠ Seu endereço cadastrado está incompleto. Clique em "Alterar endereço" para preencher.');
-        alternarParaEnderecoPersonalizado();
+        window.toast('⚠ Seu endereço cadastrado está incompleto. Alterne para "Outros" para preencher.');
+        selecionarTipoEndereco('outros');
       } else {
-        window.toast('⚠ Preencha os campos obrigatórios do endereço de retirada (Logradouro, Número e Bairro).');
+        window.toast('⚠ Preencha os campos obrigatórios do endereço de retirada em Santos (Logradouro, Número e Bairro).');
       }
       return;
     }
@@ -1078,7 +1128,7 @@
     var logradouroCompleto = prefixoLog + logradouro;
     var compPart = complemento ? ' (' + complemento + ')' : '';
     var cepPart = cep ? ' (CEP: ' + cep + ')' : '';
-    var fullAddress = logradouroCompleto + ', ' + numero + compPart + ' - ' + bairro + ', ' + cidade + '/' + uf + cepPart;
+    var fullAddress = logradouroCompleto + ', ' + numero + compPart + ' - ' + bairro + ', Santos/SP' + cepPart;
 
     var dateInput = document.getElementById('req-date');
     var rawDate = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];

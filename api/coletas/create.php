@@ -39,6 +39,11 @@ if (empty($tipoResiduo) || empty($dataAgendada) || empty($enderecoColeta)) {
     sendJsonResponse(['error' => 'Preencha o tipo de resíduo, data agendada e endereço de coleta.'], 400);
 }
 
+// Validação estrita: O serviço opera exclusivamente no município de Santos/SP
+if (!stripos($enderecoColeta, 'Santos')) {
+    sendJsonResponse(['error' => 'O serviço de coleta do EcoCall opera exclusivamente no município de Santos/SP. Por favor, informe um endereço de retirada em Santos.'], 400);
+}
+
 $protocolo = date('Ymd') . '-' . rand(100, 999);
 
 $stmt = $pdo->prepare("

@@ -24,7 +24,7 @@ if (!$email || empty($senha)) {
 $pdo = getDBConnection();
 
 // 1. Tenta buscar primeiro na tabela dedicada de empresas
-$stmtEmp = $pdo->prepare("SELECT id, razao_social, cnpj, email, senha, status_conta, email_verificado, token_ativacao FROM empresas WHERE email = :email");
+$stmtEmp = $pdo->prepare("SELECT id, razao_social, cnpj, email, senha, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, status_conta, email_verificado, token_ativacao FROM empresas WHERE email = :email");
 $stmtEmp->execute([':email' => $email]);
 $empresa = $stmtEmp->fetch();
 
@@ -62,6 +62,16 @@ if ($empresa && password_verify($senha, $empresa['senha'])) {
             'nome' => $empresa['razao_social'],
             'cnpj' => $empresa['cnpj'],
             'email' => $empresa['email'],
+            'telefone' => $empresa['telefone'] ?? '',
+            'cep' => $empresa['cep'] ?? '',
+            'tipo_logradouro' => $empresa['tipo_logradouro'] ?? 'Rua',
+            'logradouro' => $empresa['logradouro'] ?? '',
+            'numero' => $empresa['numero'] ?? '',
+            'complemento' => $empresa['complemento'] ?? '',
+            'bairro' => $empresa['bairro'] ?? '',
+            'cidade' => $empresa['cidade'] ?? 'Santos',
+            'uf' => $empresa['uf'] ?? 'SP',
+            'endereco' => $empresa['endereco'] ?? '',
             'tipo' => 'empresa',
             'empresa_id' => $empresa['id']
         ],
@@ -70,7 +80,7 @@ if ($empresa && password_verify($senha, $empresa['senha'])) {
 }
 
 // 2. Tenta buscar na tabela de usuários (cidadãos ou empresas legadas)
-$stmt = $pdo->prepare("SELECT id, nome, email, senha, tipo, pontos, status_conta, email_verificado, token_ativacao FROM usuarios WHERE email = :email");
+$stmt = $pdo->prepare("SELECT id, nome, email, senha, cpf, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, tipo, pontos, status_conta, email_verificado, token_ativacao FROM usuarios WHERE email = :email");
 $stmt->execute([':email' => $email]);
 $user = $stmt->fetch();
 
@@ -115,6 +125,17 @@ if ($user && password_verify($senha, $user['senha'])) {
             'id' => $user['id'],
             'nome' => $user['nome'],
             'email' => $user['email'],
+            'cpf' => $user['cpf'] ?? '',
+            'telefone' => $user['telefone'] ?? '',
+            'cep' => $user['cep'] ?? '',
+            'tipo_logradouro' => $user['tipo_logradouro'] ?? 'Rua',
+            'logradouro' => $user['logradouro'] ?? '',
+            'numero' => $user['numero'] ?? '',
+            'complemento' => $user['complemento'] ?? '',
+            'bairro' => $user['bairro'] ?? '',
+            'cidade' => $user['cidade'] ?? 'Santos',
+            'uf' => $user['uf'] ?? 'SP',
+            'endereco' => $user['endereco'] ?? '',
             'tipo' => $tipoFinal,
             'pontos' => $user['pontos'] ?? 0,
             'empresa_id' => $isEmpresa ? $user['id'] : null

@@ -8,9 +8,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   
   <!-- CSS estruturado e ordenado para consistência global -->
-  <link rel="stylesheet" href="css/shared.css?v=2.2">
-  <link rel="stylesheet" href="css/ecocall-dashboard.css?v=2.2">
-  <link rel="stylesheet" href="css/minhas-coletas.css?v=2.2">
+  <link rel="stylesheet" href="css/shared.css?v=2.5">
+  <link rel="stylesheet" href="css/ecocall-dashboard.css?v=2.5">
+  <link rel="stylesheet" href="css/minhas-coletas.css?v=2.5">
 </head>
 <body class="dash-page">
 
@@ -495,6 +495,14 @@
         </div>
       </div>
 
+      <!-- Alerta Informativo caso endereço residencial seja de outra cidade -->
+      <div id="req-addr-fora-santos-alert" class="req-addr-alert-warning" style="display:none;">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-text">
+          <strong>Atendimento exclusivo em Santos/SP:</strong> Seu endereço residencial cadastrado é em <span id="req-addr-cidade-origem" style="font-weight:700;">outra cidade</span>. Por isso, selecione obrigatoriamente um endereço de retirada em <strong>Santos</strong> no modo <strong>Outros</strong>.
+        </div>
+      </div>
+
       <!-- Dois Botões de Seleção de Endereço -->
       <div class="req-addr-tabs">
         <button type="button" id="btn-tab-addr-residencial" class="btn-addr-tab active" onclick="selecionarTipoEndereco('residencial')">
@@ -510,31 +518,31 @@
         <div class="req-addr-card-header">
           <div class="req-addr-icon">🏠</div>
           <div class="req-addr-info">
-            <div class="req-addr-title">Endereço Residencial Cadastrado</div>
+            <div class="req-addr-title">Endereço Residencial Cadastrado (Santos - SP)</div>
             <div id="req-addr-preview-text" class="req-addr-text">Carregando seu endereço residencial...</div>
           </div>
         </div>
         <div class="req-addr-card-actions">
-          <span class="req-addr-tip">Retirada será agendada no seu endereço residencial padrão.</span>
+          <span class="req-addr-tip">Retirada será agendada no seu endereço residencial em Santos.</span>
           <button type="button" class="btn-change-addr" onclick="selecionarTipoEndereco('outros')">
             📍 Adicionar outro endereço
           </button>
         </div>
       </div>
 
-      <!-- Formulário de Outro Endereço Personalizado (ViaCEP & IBGE) -->
+      <!-- Formulário de Outro Endereço Personalizado (Restrito a Santos - SP) -->
       <div id="req-addr-custom-form" class="req-addr-custom-wrapper" style="display:none;">
         <div class="req-addr-custom-header">
-          <span class="req-subtext" style="color:#2c4033;font-weight:700;font-size:0.82rem;">Digite o outro endereço ou consulte pelo CEP:</span>
-          <button type="button" class="btn-restore-addr" onclick="selecionarTipoEndereco('residencial')">
+          <span class="req-subtext" style="color:#2c4033;font-weight:700;font-size:0.82rem;">Informe o endereço em Santos (ou digite o CEP 11000 a 11099):</span>
+          <button type="button" id="btn-restore-addr-link" class="btn-restore-addr" onclick="selecionarTipoEndereco('residencial')">
             🏠 Voltar para Residencial
           </button>
         </div>
 
         <div class="req-row-2">
           <div class="req-field">
-            <label class="req-label">CEP (Busca Automática) <span class="req-required">*</span></label>
-            <input type="text" id="req-cep" placeholder="00000-000" oninput="maskReqCEP(this); if(this.value.replace(/\D/g,'').length===8) buscarCEPReq();" onblur="buscarCEPReq()">
+            <label class="req-label">CEP de Santos (Busca Automática) <span class="req-required">*</span></label>
+            <input type="text" id="req-cep" placeholder="11000-000" oninput="maskReqCEP(this); if(this.value.replace(/\D/g,'').length===8) buscarCEPReq();" onblur="buscarCEPReq()">
           </div>
           <div class="req-field">
             <label class="req-label">Tipo de Logradouro</label>
@@ -569,50 +577,19 @@
             <input type="text" id="req-complemento" placeholder="Ex: Apto 42, Bloco B">
           </div>
           <div class="req-field">
-            <label class="req-label">Bairro <span class="req-required">*</span></label>
-            <input type="text" id="req-bairro" placeholder="Ex: Gonzaga">
+            <label class="req-label">Bairro em Santos <span class="req-required">*</span></label>
+            <input type="text" id="req-bairro" placeholder="Ex: Gonzaga, Boqueirão, Ponta da Praia...">
           </div>
         </div>
 
         <div class="req-row-2">
           <div class="req-field">
-            <label class="req-label">Estado (UF) <span class="req-required">*</span></label>
-            <select id="req-uf" onchange="carregarCidadesReq()">
-              <option value="">UF</option>
-              <option value="AC">AC - Acre</option>
-              <option value="AL">AL - Alagoas</option>
-              <option value="AP">AP - Amapá</option>
-              <option value="AM">AM - Amazonas</option>
-              <option value="BA">BA - Bahia</option>
-              <option value="CE">CE - Ceará</option>
-              <option value="DF">DF - Distrito Federal</option>
-              <option value="ES">ES - Espírito Santo</option>
-              <option value="GO">GO - Goiás</option>
-              <option value="MA">MA - Maranhão</option>
-              <option value="MT">MT - Mato Grosso</option>
-              <option value="MS">MS - Mato Grosso do Sul</option>
-              <option value="MG">MG - Minas Gerais</option>
-              <option value="PA">PA - Pará</option>
-              <option value="PB">PB - Paraíba</option>
-              <option value="PR">PR - Paraná</option>
-              <option value="PE">PE - Pernambuco</option>
-              <option value="PI">PI - Piauí</option>
-              <option value="RJ">RJ - Rio de Janeiro</option>
-              <option value="RN">RN - Rio Grande do Norte</option>
-              <option value="RS">RS - Rio Grande do Sul</option>
-              <option value="RO">RO - Rondônia</option>
-              <option value="RR">RR - Roraima</option>
-              <option value="SC">SC - Santa Catarina</option>
-              <option value="SP" selected>SP - São Paulo</option>
-              <option value="SE">SE - Sergipe</option>
-              <option value="TO">TO - Tocantins</option>
-            </select>
+            <label class="req-label">Estado (UF)</label>
+            <input type="text" id="req-uf" value="SP" readonly style="background:#f1f5f2;cursor:not-allowed;font-weight:700;">
           </div>
           <div class="req-field">
-            <label class="req-label">Cidade <span class="req-required">*</span></label>
-            <select id="req-cidade">
-              <option value="Santos" selected>Santos</option>
-            </select>
+            <label class="req-label">Cidade (Exclusivo Santos/SP)</label>
+            <input type="text" id="req-cidade" value="Santos" readonly style="background:#f1f5f2;cursor:not-allowed;font-weight:700;">
           </div>
         </div>
       </div>
@@ -669,7 +646,7 @@
   <!-- Inicializadores de Script & Leaflet Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/core.js?v=2.2"></script>
-  <script src="js/ecocall-dashboard.js?v=2.2"></script>
+  <script src="js/core.js?v=2.5"></script>
+  <script src="js/ecocall-dashboard.js?v=2.5"></script>
 </body>
 </html>
