@@ -22,6 +22,15 @@
     window.showLoader('ecocall-home.html');
   }
 
+  function formatPhoneInput(val) {
+    var digits = val.replace(/\D/g, '').slice(0, 11);
+    if (!digits.length) return '';
+    if (digits.length <= 2) return '(' + digits;
+    if (digits.length <= 6) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+    if (digits.length <= 10) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
+    return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7, 11);
+  }
+
   function handleTogglePwd() {
     pwdVisible = !pwdVisible;
     pwdInput.type = pwdVisible ? 'text' : 'password';
@@ -108,25 +117,44 @@
     var lbl = document.getElementById('lbl-forgot-identificador');
     var input = document.getElementById('forgot-identificador');
 
+    if (input) input.value = '';
+
     if (method === 'email') {
       if (btnEmail) btnEmail.classList.add('active');
       if (btnSms) btnSms.classList.remove('active');
       if (lbl) lbl.textContent = 'E-mail Cadastrado';
-      if (input) input.placeholder = 'Digite seu e-mail cadastrado';
+      if (input) {
+        input.placeholder = 'Digite seu e-mail cadastrado';
+        input.type = 'email';
+      }
     } else {
       if (btnEmail) btnEmail.classList.remove('active');
       if (btnSms) btnSms.classList.add('active');
       if (lbl) lbl.textContent = 'Celular / WhatsApp Cadastrado';
-      if (input) input.placeholder = 'Ex: (13) 99876-5432';
+      if (input) {
+        input.placeholder = 'Ex: (13) 99876-5432';
+        input.type = 'tel';
+      }
     }
+    if (input) input.focus();
   }
 
   function solicitarCodigoRecuperacao() {
     var input = document.getElementById('forgot-identificador');
     var idVal = input ? input.value.trim() : '';
     if (!idVal) {
-      showToast('⚠ Informe seu ' + (currentForgotMethod === 'email' ? 'e-mail' : 'celular') + ' cadastrado.');
+      showToast('⚠ Informe seu ' + (currentForgotMethod === 'email' ? 'e-mail' : 'celular com DDD') + ' cadastrado.');
+      if (input) input.focus();
       return;
+    }
+
+    if (currentForgotMethod === 'sms') {
+      var digits = idVal.replace(/\D/g, '');
+      if (digits.length < 8) {
+        showToast('⚠ Digite um número de celular válido com DDD.');
+        if (input) input.focus();
+        return;
+      }
     }
 
     var btn = document.getElementById('btn-send-code');
@@ -150,7 +178,7 @@
       }
 
       if (res && res.success) {
-        lastSentIdentificador = idVal;
+        lastSentIdentificador = res.identificador || idVal;
         showToast('✓ ' + (res.message || 'Código enviado com sucesso!'));
 
         var step1 = document.getElementById('forgot-step-1');
@@ -159,8 +187,14 @@
         var codeInput = document.getElementById('forgot-code');
 
         if (msgEl) {
-          msgEl.innerHTML = 'Código de 6 dígitos enviado para <strong>' + (res.destino_mascarado || idVal) + '</strong>.' +
-            (res.preview_codigo ? '<br><small style="color:#52d67b;font-weight:600;">Código de teste: ' + res.preview_codigo + '</small>' : '');
+          var htmlMsg = 'Código de 6 dígitos enviado para <strong>' + (res.destino_mascarado || idVal) + '</strong>.';
+          if (res.email_backup_mascarado && res.metodo === 'sms') {
+            htmlMsg += '<br><span style="font-size:0.8rem;color:#a3c4b0;">Enviado também para seu e-mail cadastrado <strong>' + res.email_backup_mascarado + '</strong>.</span>';
+          }
+          if (res.preview_codigo) {
+            htmlMsg += '<br><small style="color:#52d67b;font-weight:600;">Código de teste: ' + res.preview_codigo + '</small>';
+          }
+          msgEl.innerHTML = htmlMsg;
         }
 
         if (step1) step1.style.display = 'none';
@@ -199,14 +233,17 @@
 
     if (!code || code.length !== 6) {
       showToast('⚠ Digite o código de 6 dígitos recebido.');
+      if (codeInput) codeInput.focus();
       return;
     }
     if (newPwd.length < 6) {
       showToast('⚠ A nova senha deve possuir ao menos 6 caracteres.');
+      if (newPwdInput) newPwdInput.focus();
       return;
     }
     if (newPwd !== newPwdConf) {
       showToast('⚠ A confirmação de senha não coincide com a nova senha.');
+      if (newPwdConfInput) newPwdConfInput.focus();
       return;
     }
 
@@ -258,10 +295,10 @@
   function openResendModal(email, linkAtivacao) {
     var overlay = document.getElementById('resend-overlay');
     var modal = document.getElementById('resend-modal');
-    var emailInput = document.getElementById('resend-email-input');
+    var rEmailInput = document.getElementById('resend-email-input');
     var previewBox = document.getElementById('resend-preview-box');
 
-    if (emailInput && email) emailInput.value = email;
+    if (rEmailInput && email) rEmailInput.value = email;
     if (previewBox) {
       if (linkAtivacao) {
         previewBox.style.display = 'block';
@@ -339,6 +376,39 @@
 
     if (togglePwd) togglePwd.addEventListener('click', handleTogglePwd);
     if (loginBtn)  loginBtn.addEventListener('click', handleLogin);
+
+    var forgotInput = document.getElementById('forgot-identificador');
+    if (forgotInput) {
+      forgotInput.addEventListener('input', function () {
+        if (currentForgotMethod === 'sms') {
+          this.value = formatPhoneInput(this.value);
+        }
+      });
+      forgotInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          solicitarCodigoRecuperacao();
+        }
+      });
+    }
+
+    var forgotCode = document.getElementById('forgot-code');
+    if (forgotCode) {
+      forgotCode.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 6);
+      });
+    }
+
+    var forgotNewPwd = document.getElementById('forgot-new-pwd');
+    var forgotNewPwdConf = document.getElementById('forgot-new-pwd-conf');
+    if (forgotNewPwdConf) {
+      forgotNewPwdConf.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          confirmarRedefinicaoSenha();
+        }
+      });
+    }
 
     document.querySelectorAll('.btn-social').forEach(function (b) {
       b.addEventListener('click', function () {

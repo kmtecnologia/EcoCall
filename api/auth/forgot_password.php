@@ -1,7 +1,7 @@
 <?php
 /* ==========================================================================
    EcoCall — Endpoint API: Solicitar Código de Recuperação de Senha (POST /api/auth/forgot_password.php)
-   Suporte multi-canal: Recuperação por E-mail ou por SMS (Celular)
+   Suporte multi-canal: Recuperação por E-mail ou por Telefone / Celular (SMS / WhatsApp)
    ========================================================================== */
 
 require_once __DIR__ . '/../config/db.php';
@@ -18,7 +18,7 @@ $identificador = trim($data['identificador'] ?? $data['email'] ?? $data['telefon
 $metodo = strtolower(trim($data['metodo'] ?? 'email')) === 'sms' ? 'sms' : 'email';
 
 if (empty($identificador)) {
-    sendJsonResponse(['error' => 'Por favor, informe seu e-mail ou número de celular.'], 400);
+    sendJsonResponse(['error' => 'Por favor, informe seu e-mail ou número de telefone/celular.'], 400);
 }
 
 $pdo = getDBConnection();
@@ -34,7 +34,7 @@ if ($metodo === 'email') {
         sendJsonResponse(['error' => $valEmail['motivo']], 400);
     }
 
-    // Busca usuário
+    // Busca usuário cidadão por e-mail
     $stmtU = $pdo->prepare("SELECT id, nome, email, telefone FROM usuarios WHERE email = :email");
     $stmtU->execute([':email' => $identificador]);
     $contaEncontrada = $stmtU->fetch();
@@ -42,7 +42,7 @@ if ($metodo === 'email') {
     if ($contaEncontrada) {
         $tipoConta = 'user';
     } else {
-        // Busca empresa
+        // Busca empresa por e-mail
         $stmtE = $pdo->prepare("SELECT id, razao_social as nome, email, telefone FROM empresas WHERE email = :email");
         $stmtE->execute([':email' => $identificador]);
         $contaEncontrada = $stmtE->fetch();
@@ -51,21 +51,65 @@ if ($metodo === 'email') {
         }
     }
 } else {
-    // Método SMS: normaliza dígitos
-    $telDigitos = preg_replace('/\D/', '', $identificador);
-    if (strlen($telDigitos) < 8) {
-        sendJsonResponse(['error' => 'Por favor, informe um número de telefone/celular válido.'], 400);
+    // Método SMS / Telefone: normaliza apenas dígitos numéricos
+    $cleanTel = preg_replace('/\D/', '', $identificador);
+    if (strlen($cleanTel) < 8) {
+        sendJsonResponse(['error' => 'Por favor, informe um número de telefone/celular válido com DDD.'], 400);
     }
 
-    $stmtU = $pdo->prepare("SELECT id, nome, email, telefone FROM usuarios WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE :tel");
-    $stmtU->execute([':tel' => '%' . substr($telDigitos, -8)]);
+    // Remove prefixo de DDI 55 (Brasil) se houver
+    if (strlen($cleanTel) >= 12 && substr($cleanTel, 0, 2) === '55') {
+        $cleanTel = substr($cleanTel, 2);
+    }
+
+    $suffix8 = substr($cleanTel, -8);
+    $suffix9 = (strlen($cleanTel) >= 9) ? substr($cleanTel, -9) : $suffix8;
+    $cleanExact = $cleanTel;
+
+    // Busca usuário com query resiliente a pontuação/formatação
+    $sqlSearch = "
+        SELECT id, nome, email, telefone 
+        FROM usuarios 
+        WHERE (
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '+', ''), '.', '') = :cleanExact
+            OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '+', ''), '.', '') LIKE :suffix9
+            OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '+', ''), '.', '') LIKE :suffix8
+            OR telefone = :rawTel
+            OR telefone LIKE :likeRaw
+        )
+        ORDER BY id DESC LIMIT 1
+    ";
+
+    $params = [
+        ':cleanExact' => $cleanExact,
+        ':suffix9'    => '%' . $suffix9,
+        ':suffix8'    => '%' . $suffix8,
+        ':rawTel'     => $identificador,
+        ':likeRaw'    => '%' . $suffix8 . '%'
+    ];
+
+    $stmtU = $pdo->prepare($sqlSearch);
+    $stmtU->execute($params);
     $contaEncontrada = $stmtU->fetch();
 
     if ($contaEncontrada) {
         $tipoConta = 'user';
     } else {
-        $stmtE = $pdo->prepare("SELECT id, razao_social as nome, email, telefone FROM empresas WHERE REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE :tel");
-        $stmtE->execute([':tel' => '%' . substr($telDigitos, -8)]);
+        // Busca em empresas
+        $sqlSearchEmp = "
+            SELECT id, razao_social as nome, email, telefone 
+            FROM empresas 
+            WHERE (
+                REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '+', ''), '.', '') = :cleanExact
+                OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '+', ''), '.', '') LIKE :suffix9
+                OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '+', ''), '.', '') LIKE :suffix8
+                OR telefone = :rawTel
+                OR telefone LIKE :likeRaw
+            )
+            ORDER BY id DESC LIMIT 1
+        ";
+        $stmtE = $pdo->prepare($sqlSearchEmp);
+        $stmtE->execute($params);
         $contaEncontrada = $stmtE->fetch();
         if ($contaEncontrada) {
             $tipoConta = 'empresa';
@@ -75,73 +119,118 @@ if ($metodo === 'email') {
 
 if (!$contaEncontrada) {
     sendJsonResponse([
-        'error' => 'Nenhuma conta de cidadão ou empresa foi encontrada com o ' . ($metodo === 'email' ? 'e-mail' : 'celular') . ' informado.'
+        'error' => 'Nenhuma conta de cidadão ou empresa foi encontrada com o ' . ($metodo === 'email' ? 'e-mail' : 'número de celular') . ' informado.'
     ], 404);
 }
 
-// Gera código numérico de 6 dígitos
+$contaId = (int)$contaEncontrada['id'];
+$contaNome = $contaEncontrada['nome'];
+$contaEmail = $contaEncontrada['email'];
+$contaTelefone = $contaEncontrada['telefone'] ?: $identificador;
+
+// Gera código numérico seguro de 6 dígitos
 $codigo = str_pad(strval(random_int(100000, 999999)), 6, '0', STR_PAD_LEFT);
 $expiraEm = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
-// Invalida códigos anteriores não utilizados para o mesmo identificador
-$stmtInv = $pdo->prepare("UPDATE password_resets SET utilizado = 1 WHERE identificador = :id AND utilizado = 0");
-$stmtInv->execute([':id' => $identificador]);
-
-// Salva o novo código
-$stmtIns = $pdo->prepare("
-    INSERT INTO password_resets (identificador, metodo, codigo, tipo_conta, utilizado, expira_em)
-    VALUES (:identificador, :metodo, :codigo, :tipo_conta, 0, :expira_em)
+// Invalida códigos anteriores pendentes para a mesma conta ou identificador
+$stmtInv = $pdo->prepare("
+    UPDATE password_resets 
+    SET utilizado = 1 
+    WHERE (conta_id = :cid AND tipo_conta = :tipo)
+       OR identificador = :id1 
+       OR identificador = :id2
+       OR identificador = :id3
 ");
-$stmtIns->execute([
-    ':identificador' => $identificador,
-    ':metodo' => $metodo,
-    ':codigo' => $codigo,
-    ':tipo_conta' => $tipoConta,
-    ':expira_em' => $expiraEm
+$stmtInv->execute([
+    ':cid' => $contaId,
+    ':tipo' => $tipoConta,
+    ':id1' => $identificador,
+    ':id2' => $contaEmail,
+    ':id3' => $contaTelefone
 ]);
 
-// Mascaramento de dados para exibição segura e Envio de E-mail
+// Salva o novo código com vínculo seguro do ID da conta
+$stmtIns = $pdo->prepare("
+    INSERT INTO password_resets (conta_id, identificador, metodo, codigo, tipo_conta, utilizado, expira_em)
+    VALUES (:conta_id, :identificador, :metodo, :codigo, :tipo_conta, 0, :expira_em)
+");
+$stmtIns->execute([
+    ':conta_id'     => $contaId,
+    ':identificador'=> $identificador,
+    ':metodo'       => $metodo,
+    ':codigo'       => $codigo,
+    ':tipo_conta'   => $tipoConta,
+    ':expira_em'    => $expiraEm
+]);
+
+// Formatação e Mascaramento para exibição segura
 $destinoMascarado = '';
 $emailEnviado = false;
 $emailError = null;
+$emailProvider = 'smtp';
+$emailNotificadoMascarado = '';
+
+// Mascara e-mail cadastrado
+if (!empty($contaEmail)) {
+    $emParts = explode('@', $contaEmail);
+    $userPart = $emParts[0];
+    $domainPart = $emParts[1] ?? 'ecocall.com';
+    $userMask = substr($userPart, 0, 2) . str_repeat('*', max(1, strlen($userPart) - 3)) . substr($userPart, -1);
+    $emailNotificadoMascarado = $userMask . '@' . $domainPart;
+}
 
 if ($metodo === 'email') {
-    $em = $contaEncontrada['email'];
-    $pts = explode('@', $em);
-    $userPart = $pts[0];
-    $domainPart = $pts[1] ?? 'ecocall.com';
-    $userMask = substr($userPart, 0, 2) . str_repeat('*', max(1, strlen($userPart) - 3)) . substr($userPart, -1);
-    $destinoMascarado = $userMask . '@' . $domainPart;
+    $destinoMascarado = $emailNotificadoMascarado;
 
     // Envia o e-mail real com template moderno
     $assunto = "EcoCall - Código de Recuperação de Senha";
-    $nomeDest = $contaEncontrada['nome'];
-    $mensagemHtml = "<p>Olá, <strong>{$nomeDest}</strong>!</p>
-                     <p>Recebemos uma solicitação para redefinir a senha de acesso da sua conta no <strong>EcoCall</strong>.</p>
+    $mensagemHtml = "<p>Olá, <strong>{$contaNome}</strong>!</p>
+                     <p>Recebemos uma solicitação para redefinir a senha da sua conta no <strong>EcoCall</strong>.</p>
                      <p>Utilize o código de segurança abaixo para prosseguir com a alteração da sua senha:</p>";
     
     $corpo = gerarTemplateEmailEcoCall("Recuperação de Senha", $mensagemHtml, null, null, $codigo);
+    $envio = enviarEmail($contaEmail, $contaNome, $assunto, $corpo);
     
-    $envio = enviarEmail($em, $nomeDest, $assunto, $corpo);
     $emailEnviado = $envio['success'];
     $emailError = $envio['error'] ?? null;
     $emailProvider = $envio['provider'] ?? 'smtp';
 
 } else {
-    $tel = $contaEncontrada['telefone'] ?: $identificador;
-    $destinoMascarado = substr($tel, 0, 5) . '****-' . substr($tel, -4);
-    $emailProvider = 'sms';
-    // Para SMS, a integração com API de SMS viria aqui (Twilio, Zenvia, etc)
+    // Mascara número de telefone: ex: (13) 9****-5432
+    $telDigits = preg_replace('/\D/', '', $contaTelefone);
+    if (strlen($telDigits) >= 10) {
+        $ddd = substr($telDigits, 0, 2);
+        $firstDigit = (strlen($telDigits) === 11) ? substr($telDigits, 2, 1) : '';
+        $last4 = substr($telDigits, -4);
+        $destinoMascarado = "({$ddd}) {$firstDigit}****-{$last4}";
+    } else {
+        $destinoMascarado = substr($contaTelefone, 0, 4) . '****' . substr($contaTelefone, -3);
+    }
+
+    // DISPARO MULTI-CANAL SEGURO:
+    // Envia também uma cópia imediata para o e-mail cadastrado da conta como garantia
+    $assunto = "EcoCall - Código de Recuperação de Senha (Celular / SMS)";
+    $mensagemHtml = "<p>Olá, <strong>{$contaNome}</strong>!</p>
+                     <p>Recebemos uma solicitação de recuperação de senha para a sua conta associada ao telefone <strong>{$destinoMascarado}</strong>.</p>
+                     <p>Para sua conveniência e segurança, enviamos o código de verificação de 6 dígitos:</p>";
+
+    $corpo = gerarTemplateEmailEcoCall("Código de Verificação SMS / Celular", $mensagemHtml, null, null, $codigo);
+    $envio = enviarEmail($contaEmail, $contaNome, $assunto, $corpo);
+
+    $emailEnviado = $envio['success'];
+    $emailError = $envio['error'] ?? null;
+    $emailProvider = $envio['provider'] ?? 'smtp';
 }
 
 sendJsonResponse([
     'success' => true,
-    'message' => 'Código de verificação de 6 dígitos enviado com sucesso!',
+    'message' => 'Código de verificação de 6 dígitos gerado e enviado com sucesso!',
     'metodo' => $metodo,
     'destino_mascarado' => $destinoMascarado,
+    'email_backup_mascarado' => $emailNotificadoMascarado,
     'identificador' => $identificador,
     'email_enviado' => $emailEnviado,
     'email_provider' => $emailProvider,
     'email_error' => $emailError,
-    'preview_codigo' => $codigo // Fornecido para facilidade em ambiente local / simulação
+    'preview_codigo' => $codigo // Fornecido para teste em ambiente local / simulação
 ]);

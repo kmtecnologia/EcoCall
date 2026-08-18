@@ -59,6 +59,7 @@ function getDBConnection() {
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS password_resets (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    conta_id INT DEFAULT NULL,
                     identificador VARCHAR(150) NOT NULL,
                     metodo ENUM('email', 'sms') NOT NULL DEFAULT 'email',
                     codigo VARCHAR(10) NOT NULL,
@@ -68,6 +69,7 @@ function getDBConnection() {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
+            $pdo->exec("ALTER TABLE password_resets ADD COLUMN conta_id INT DEFAULT NULL");
         } catch (Exception $ex) {}
 
         return $pdo;

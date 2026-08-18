@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS avaliacoes (
 
 CREATE TABLE IF NOT EXISTS password_resets (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    conta_id INT DEFAULT NULL,
     identificador VARCHAR(150) NOT NULL,
     metodo ENUM('email', 'sms') NOT NULL DEFAULT 'email',
     codigo VARCHAR(10) NOT NULL,
