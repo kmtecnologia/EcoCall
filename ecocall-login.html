@@ -188,13 +188,13 @@
 
   </div>
 
-  <!-- Modal de Recuperação de Senha Multi-Canal (E-mail / WhatsApp) -->
+  <!-- Modal de Recuperação de Senha por E-mail -->
   <div class="forgot-overlay" id="forgot-overlay" onclick="closeForgotModal()"></div>
   <div class="forgot-modal" id="forgot-modal">
     <div class="fmodal-head">
       <div>
-        <h3 style="font-family:var(--font-syne);font-size:1.25rem;color:#fff;margin-bottom:4px;">Recuperar Acesso 🔐</h3>
-        <p style="font-size:0.84rem;color:#a3c4b0;">Redefina sua senha via código seguro por E-mail ou WhatsApp.</p>
+        <h3 style="font-family:var(--font-syne);font-size:1.25rem;color:#fff;margin-bottom:4px;">Recuperar Senha 🔐</h3>
+        <p style="font-size:0.84rem;color:#a3c4b0;">Informe seu e-mail para receber o código de recuperação.</p>
       </div>
       <button class="fmodal-close" type="button" onclick="closeForgotModal()">✕</button>
     </div>
@@ -202,27 +202,26 @@
     <div class="fmodal-body">
       <!-- Passo 1: Solicitar Código -->
       <div id="forgot-step-1">
-        <div class="fmethod-toggle">
-          <button type="button" class="fmethod-btn active" id="btn-method-email" onclick="setForgotMethod('email')">📧 Por E-mail</button>
-          <button type="button" class="fmethod-btn" id="btn-method-whatsapp" onclick="setForgotMethod('whatsapp')">💬 Por WhatsApp</button>
-        </div>
-
-        <div class="input-group" style="margin-top:1.2rem;">
-          <label id="lbl-forgot-identificador">E-mail Cadastrado</label>
+        <div class="input-group" style="margin-top:0.6rem;">
+          <label>E-mail Cadastrado</label>
           <div class="input-wrapper">
-            <input type="text" id="forgot-identificador" placeholder="Digite seu e-mail cadastrado">
+            <input type="email" id="forgot-identificador" placeholder="seu@email.com" autocomplete="email">
+            <svg class="iico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
           </div>
         </div>
 
         <button type="button" class="btn-primary" id="btn-send-code" style="margin-top:1.2rem;" onclick="solicitarCodigoRecuperacao()">
-          → Enviar Código de Verificação
+          → Enviar Código por E-mail
         </button>
       </div>
 
       <!-- Passo 2: Digitar Código e Nova Senha -->
       <div id="forgot-step-2" style="display:none;">
         <div style="background:rgba(82,214,123,0.12);border:1px solid rgba(82,214,123,0.3);padding:0.8rem 1rem;border-radius:10px;font-size:0.85rem;color:#c7efd3;margin-bottom:1rem;" id="forgot-sent-msg">
-          Código de 6 dígitos enviado para seu contato.
+          Código de 6 dígitos enviado para seu e-mail.
         </div>
 
         <div class="input-group">

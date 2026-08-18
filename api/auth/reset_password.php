@@ -1,7 +1,7 @@
 <?php
 /* ==========================================================================
    EcoCall — Endpoint API: Redefinir Senha (POST /api/auth/reset_password.php)
-   Valida o código de 6 dígitos recebido por E-mail ou SMS e atualiza a senha de forma infalível
+   Valida o código de 6 dígitos recebido por E-mail e atualiza a senha de forma segura
    ========================================================================== */
 
 require_once __DIR__ . '/../config/db.php';
@@ -13,12 +13,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true) ?: $_POST;
 
-$identificador = trim($data['identificador'] ?? $data['email'] ?? $data['telefone'] ?? '');
+$email = trim($data['email'] ?? $data['identificador'] ?? '');
 $codigo = trim($data['codigo'] ?? '');
 $novaSenha = trim($data['nova_senha'] ?? $data['senha'] ?? '');
 
-if (empty($identificador) || empty($codigo) || empty($novaSenha)) {
-    sendJsonResponse(['error' => 'Informe o identificador (e-mail/celular), o código de 6 dígitos e a nova senha.'], 400);
+if (empty($email) || empty($codigo) || empty($novaSenha)) {
+    sendJsonResponse(['error' => 'Informe seu e-mail, o código de 6 dígitos e a nova senha.'], 400);
 }
 
 if (strlen($novaSenha) < 6) {
@@ -27,40 +27,30 @@ if (strlen($novaSenha) < 6) {
 
 $pdo = getDBConnection();
 
-$cleanTel = preg_replace('/\D/', '', $identificador);
-if (strlen($cleanTel) >= 12 && substr($cleanTel, 0, 2) === '55') {
-    $cleanTel = substr($cleanTel, 2);
-}
-$suffix8 = strlen($cleanTel) >= 8 ? substr($cleanTel, -8) : $cleanTel;
-
 // 1. Busca o código no histórico de password_resets
 $stmtCheck = $pdo->prepare("
     SELECT id, conta_id, identificador, tipo_conta, expira_em, utilizado 
     FROM password_resets 
     WHERE codigo = :cod 
       AND (
-          identificador = :id 
-          OR identificador = :clean
-          OR identificador LIKE :suffixLike
+          identificador = :email 
           OR conta_id IN (
-              SELECT id FROM usuarios WHERE email = :id OR REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE :suffixLike
+              SELECT id FROM usuarios WHERE email = :email
               UNION
-              SELECT id FROM empresas WHERE email = :id OR REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', '') LIKE :suffixLike
+              SELECT id FROM empresas WHERE email = :email
           )
       )
     ORDER BY id DESC LIMIT 1
 ");
 
 $stmtCheck->execute([
-    ':cod'        => $codigo,
-    ':id'         => $identificador,
-    ':clean'      => $cleanTel,
-    ':suffixLike' => '%' . $suffix8
+    ':cod'   => $codigo,
+    ':email' => $email
 ]);
 $resetRecord = $stmtCheck->fetch();
 
 if (!$resetRecord) {
-    // Fallback: busca apenas pelo código ativo mais recente não utilizado
+    // Fallback: busca pelo código não utilizado mais recente
     $stmtFallback = $pdo->prepare("
         SELECT id, conta_id, identificador, tipo_conta, expira_em, utilizado 
         FROM password_resets 
@@ -87,25 +77,14 @@ $hashNovaSenha = password_hash($novaSenha, PASSWORD_DEFAULT);
 $tipoConta = $resetRecord['tipo_conta'] ?? 'user';
 $contaId = !empty($resetRecord['conta_id']) ? (int)$resetRecord['conta_id'] : null;
 
-// 2. Atualiza a senha na tabela correspondente (por ID da conta ou busca resiliente)
+// 2. Atualiza a senha na tabela correspondente
 if ($tipoConta === 'empresa') {
     if ($contaId) {
         $stmtUpd = $pdo->prepare("UPDATE empresas SET senha = :senha WHERE id = :cid");
         $stmtUpd->execute([':senha' => $hashNovaSenha, ':cid' => $contaId]);
     } else {
-        $stmtUpd = $pdo->prepare("
-            UPDATE empresas 
-            SET senha = :senha 
-            WHERE email = :id 
-               OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') LIKE :suffix
-               OR telefone = :rawId
-        ");
-        $stmtUpd->execute([
-            ':senha' => $hashNovaSenha,
-            ':id'    => $identificador,
-            ':suffix'=> '%' . $suffix8,
-            ':rawId' => $identificador
-        ]);
+        $stmtUpd = $pdo->prepare("UPDATE empresas SET senha = :senha WHERE email = :email");
+        $stmtUpd->execute([':senha' => $hashNovaSenha, ':email' => $email]);
     }
 } else {
     // Usuário cidadão
@@ -113,19 +92,8 @@ if ($tipoConta === 'empresa') {
         $stmtUpd = $pdo->prepare("UPDATE usuarios SET senha = :senha WHERE id = :cid");
         $stmtUpd->execute([':senha' => $hashNovaSenha, ':cid' => $contaId]);
     } else {
-        $stmtUpd = $pdo->prepare("
-            UPDATE usuarios 
-            SET senha = :senha 
-            WHERE email = :id 
-               OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone, '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') LIKE :suffix
-               OR telefone = :rawId
-        ");
-        $stmtUpd->execute([
-            ':senha' => $hashNovaSenha,
-            ':id'    => $identificador,
-            ':suffix'=> '%' . $suffix8,
-            ':rawId' => $identificador
-        ]);
+        $stmtUpd = $pdo->prepare("UPDATE usuarios SET senha = :senha WHERE email = :email");
+        $stmtUpd->execute([':senha' => $hashNovaSenha, ':email' => $email]);
     }
 }
 

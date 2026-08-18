@@ -22,15 +22,6 @@
     window.showLoader('ecocall-home.html');
   }
 
-  function formatPhoneInput(val) {
-    var digits = val.replace(/\D/g, '').slice(0, 11);
-    if (!digits.length) return '';
-    if (digits.length <= 2) return '(' + digits;
-    if (digits.length <= 6) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
-    if (digits.length <= 10) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6);
-    return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7, 11);
-  }
-
   function handleTogglePwd() {
     pwdVisible = !pwdVisible;
     pwdInput.type = pwdVisible ? 'text' : 'password';
@@ -93,14 +84,19 @@
   }
 
   /* ==========================================================================
-     MODAL DE ESQUECI A SENHA (E-MAIL & SMS)
+     MODAL DE RECUPERAÇÃO DE SENHA (EXCLUSIVO POR E-MAIL)
      ========================================================================== */
   function openForgotModal() {
     var overlay = document.getElementById('forgot-overlay');
     var modal = document.getElementById('forgot-modal');
+    var input = document.getElementById('forgot-identificador');
+    if (input && emailInput && emailInput.value) {
+      input.value = emailInput.value.trim();
+    }
     if (overlay) overlay.classList.add('open');
     if (modal) modal.classList.add('open');
     voltarPasso1Recuperacao();
+    if (input) setTimeout(function () { input.focus(); }, 150);
   }
 
   function closeForgotModal() {
@@ -110,51 +106,13 @@
     if (modal) modal.classList.remove('open');
   }
 
-  function setForgotMethod(method) {
-    currentForgotMethod = method === 'sms' ? 'whatsapp' : method;
-    var btnEmail = document.getElementById('btn-method-email');
-    var btnWhatsapp = document.getElementById('btn-method-whatsapp') || document.getElementById('btn-method-sms');
-    var lbl = document.getElementById('lbl-forgot-identificador');
-    var input = document.getElementById('forgot-identificador');
-
-    if (input) input.value = '';
-
-    if (currentForgotMethod === 'email') {
-      if (btnEmail) btnEmail.classList.add('active');
-      if (btnWhatsapp) btnWhatsapp.classList.remove('active');
-      if (lbl) lbl.textContent = 'E-mail Cadastrado';
-      if (input) {
-        input.placeholder = 'Digite seu e-mail cadastrado';
-        input.type = 'email';
-      }
-    } else {
-      if (btnEmail) btnEmail.classList.remove('active');
-      if (btnWhatsapp) btnWhatsapp.classList.add('active');
-      if (lbl) lbl.textContent = 'Número do WhatsApp (com DDD)';
-      if (input) {
-        input.placeholder = 'Ex: (13) 99610-8189';
-        input.type = 'tel';
-      }
-    }
-    if (input) input.focus();
-  }
-
   function solicitarCodigoRecuperacao() {
     var input = document.getElementById('forgot-identificador');
-    var idVal = input ? input.value.trim() : '';
-    if (!idVal) {
-      showToast('⚠ Informe seu ' + (currentForgotMethod === 'email' ? 'e-mail' : 'número de WhatsApp com DDD') + ' cadastrado.');
+    var emailVal = input ? input.value.trim() : '';
+    if (!emailVal || !emailVal.includes('@') || !emailVal.includes('.')) {
+      showToast('⚠ Informe um endereço de e-mail válido.');
       if (input) input.focus();
       return;
-    }
-
-    if (currentForgotMethod !== 'email') {
-      var digits = idVal.replace(/\D/g, '');
-      if (digits.length < 8) {
-        showToast('⚠ Digite um número de WhatsApp válido com DDD.');
-        if (input) input.focus();
-        return;
-      }
     }
 
     var btn = document.getElementById('btn-send-code');
@@ -163,23 +121,24 @@
       btn.textContent = 'Enviando código...';
     }
 
-    showToast('Gerando código de verificação...');
+    showToast('Enviando código para seu e-mail...');
 
     window.apiFetch('api/auth/forgot_password.php', {
       method: 'POST',
       body: {
-        identificador: idVal,
-        metodo: currentForgotMethod
+        email: emailVal,
+        identificador: emailVal,
+        metodo: 'email'
       }
     }).then(function (res) {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '→ Enviar Código de Verificação';
+        btn.textContent = '→ Enviar Código por E-mail';
       }
 
       if (res && res.success) {
-        lastSentIdentificador = res.identificador || idVal;
-        showToast('✓ ' + (res.message || 'Código gerado com sucesso!'));
+        lastSentIdentificador = res.identificador || emailVal;
+        showToast('✓ ' + (res.message || 'Código enviado com sucesso!'));
 
         var step1 = document.getElementById('forgot-step-1');
         var step2 = document.getElementById('forgot-step-2');
@@ -187,23 +146,7 @@
         var codeInput = document.getElementById('forgot-code');
 
         if (msgEl) {
-          var isWhatsApp = res.metodo === 'whatsapp' || res.metodo === 'sms';
-          var htmlMsg = 'Código de 6 dígitos gerado para <strong>' + (res.destino_mascarado || idVal) + '</strong>.';
-          if (res.email_backup_mascarado && isWhatsApp) {
-            htmlMsg += '<br><span style="font-size:0.8rem;color:#a3c4b0;">Enviado também para seu e-mail cadastrado <strong>' + res.email_backup_mascarado + '</strong>.</span>';
-          }
-          if (res.whatsapp_link && isWhatsApp) {
-            htmlMsg += '<div style="margin-top:12px;margin-bottom:8px;">' +
-              '<a href="' + res.whatsapp_link + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#ffffff;padding:10px 16px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;box-shadow:0 4px 12px rgba(37,211,102,0.3);width:100%;box-sizing:border-box;transition:0.2s ease;">' +
-              '💬 Abrir WhatsApp para ver o Código' +
-              '</a>' +
-            '</div>';
-
-            // Abre o WhatsApp automaticamente em nova aba
-            try {
-              window.open(res.whatsapp_link, '_blank');
-            } catch (e) {}
-          }
+          var htmlMsg = 'Código de 6 dígitos enviado para <strong>' + (res.destino_mascarado || emailVal) + '</strong>.';
           if (res.preview_codigo) {
             htmlMsg += '<div style="margin-top:6px;"><small style="color:#52d67b;font-weight:600;">Código de verificação: ' + res.preview_codigo + '</small></div>';
           }
@@ -214,15 +157,15 @@
         if (step2) step2.style.display = 'block';
         if (codeInput) {
           codeInput.value = res.preview_codigo || '';
-          codeInput.focus();
+          setTimeout(function () { codeInput.focus(); }, 150);
         }
       } else {
-        showToast('⚠ ' + (res.error || 'Não foi possível enviar o código.'));
+        showToast('⚠ ' + (res.error || 'Não foi possível enviar o código para este e-mail.'));
       }
     }).catch(function (err) {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '→ Enviar Código de Verificação';
+        btn.textContent = '→ Enviar Código por E-mail';
       }
       showToast('⚠ Falha de comunicação com o servidor.');
     });
@@ -392,11 +335,6 @@
 
     var forgotInput = document.getElementById('forgot-identificador');
     if (forgotInput) {
-      forgotInput.addEventListener('input', function () {
-        if (currentForgotMethod === 'sms') {
-          this.value = formatPhoneInput(this.value);
-        }
-      });
       forgotInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -446,7 +384,6 @@
   window.irParaHome = irParaHome;
   window.openForgotModal = openForgotModal;
   window.closeForgotModal = closeForgotModal;
-  window.setForgotMethod = setForgotMethod;
   window.solicitarCodigoRecuperacao = solicitarCodigoRecuperacao;
   window.voltarPasso1Recuperacao = voltarPasso1Recuperacao;
   window.confirmarRedefinicaoSenha = confirmarRedefinicaoSenha;
