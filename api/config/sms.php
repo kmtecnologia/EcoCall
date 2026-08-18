@@ -149,15 +149,15 @@ function enviarViaZenvia($numeroDestino, $mensagem) {
  * @return array ['success' => bool, 'provider' => string, 'error' => string|null, 'whatsapp_link' => string, 'simulado' => bool]
  */
 function enviarSMS($numeroDestino, $codigo, $nomeDestinatario = 'Cidadão') {
-    $mensagem = "EcoCall: Olá {$nomeDestinatario}, seu código de verificação para redefinir sua senha é: {$codigo}. Válido por 15 minutos.";
+    $mensagem = "🌿 *EcoCall — Recuperação de Senha*\n\nOlá, *{$nomeDestinatario}*!\n\nRecebemos uma solicitação para redefinir sua senha de acesso. Utilize o código de segurança abaixo para prosseguir:\n\n🔑 *Código:* `{$codigo}`\n\n⏱️ _Este código expira em 15 minutos._";
     $provider = strtolower(SMS_PROVIDER);
 
-    // Gera Link direto para WhatsApp
+    // Gera Link direto para WhatsApp Web / Mobile App
     $digits = preg_replace('/\D/', '', $numeroDestino);
     if (strlen($digits) === 10 || strlen($digits) === 11) {
         $digits = '55' . $digits;
     }
-    $whatsappLink = "https://wa.me/{$digits}?text=" . urlencode($mensagem);
+    $whatsappLink = "https://api.whatsapp.com/send?phone={$digits}&text=" . urlencode($mensagem);
 
     if ($provider === 'twilio' && !empty(TWILIO_ACCOUNT_SID)) {
         $res = enviarViaTwilio($numeroDestino, $mensagem);

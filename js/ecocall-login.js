@@ -187,12 +187,21 @@
         var codeInput = document.getElementById('forgot-code');
 
         if (msgEl) {
-          var htmlMsg = 'Código de 6 dígitos enviado para <strong>' + (res.destino_mascarado || idVal) + '</strong>.';
+          var htmlMsg = 'Código de 6 dígitos gerado para <strong>' + (res.destino_mascarado || idVal) + '</strong>.';
           if (res.email_backup_mascarado && res.metodo === 'sms') {
             htmlMsg += '<br><span style="font-size:0.8rem;color:#a3c4b0;">Enviado também para seu e-mail cadastrado <strong>' + res.email_backup_mascarado + '</strong>.</span>';
           }
           if (res.whatsapp_link && res.metodo === 'sms') {
-            htmlMsg += '<div style="margin-top:8px;"><a href="' + res.whatsapp_link + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:0.82rem;font-weight:600;">💬 Receber / Abrir no WhatsApp</a></div>';
+            htmlMsg += '<div style="margin-top:12px;margin-bottom:8px;">' +
+              '<a href="' + res.whatsapp_link + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#ffffff;padding:10px 16px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;box-shadow:0 4px 12px rgba(37,211,102,0.3);width:100%;box-sizing:border-box;transition:0.2s ease;">' +
+              '💬 Abrir WhatsApp para ver o Código' +
+              '</a>' +
+            '</div>';
+
+            // Abre o WhatsApp automaticamente em nova aba
+            try {
+              window.open(res.whatsapp_link, '_blank');
+            } catch (e) {}
           }
           if (res.preview_codigo) {
             htmlMsg += '<div style="margin-top:6px;"><small style="color:#52d67b;font-weight:600;">Código de verificação: ' + res.preview_codigo + '</small></div>';
