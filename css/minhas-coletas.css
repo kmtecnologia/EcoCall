@@ -1018,4 +1018,222 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ==========================================================================
+   Card de Endereço Padrão e Alternância de Endereço no Modal de Coletas
+   ========================================================================== */
+.req-addr-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0.85rem 0;
+  background: #edf5ef;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid #d4e8da;
+}
+
+.btn-addr-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.65rem 0.9rem;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: #3b5243;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-addr-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.7);
+  color: #1b5e20;
+}
+
+.btn-addr-tab.active {
+  background: #ffffff;
+  color: #1e7e3e;
+  border-color: #cce3d2;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.btn-addr-tab .tab-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.req-addr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.22rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.req-addr-badge.badge-default {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #c8e6c9;
+}
+
+.req-addr-badge.badge-custom {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.req-addr-card {
+  background: #f4faf6;
+  border: 1.5px solid #cce5d4;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(30, 126, 62, 0.04);
+}
+
+.req-addr-card:hover {
+  border-color: #2f855a;
+  box-shadow: 0 4px 14px rgba(47, 133, 90, 0.1);
+}
+
+.req-addr-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.req-addr-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  background: #e1f2e6;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #cce5d4;
+}
+
+.req-addr-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.req-addr-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e7e3e;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 3px;
+}
+
+.req-addr-text {
+  font-size: 0.9rem;
+  color: #11281a;
+  line-height: 1.45;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.req-addr-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed #d6e8dc;
+  padding-top: 0.65rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.req-addr-tip {
+  font-size: 0.75rem;
+  color: #527961;
+}
+
+.btn-change-addr {
+  background: #ffffff;
+  border: 1.5px solid #2f855a;
+  color: #1e7e3e;
+  padding: 0.45rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-change-addr:hover {
+  background: #2f855a;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(47, 133, 90, 0.25);
+  transform: translateY(-1px);
+}
+
+.req-addr-custom-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #fafcfb;
+  border: 1.5px solid #e1eee4;
+  border-radius: 12px;
+  padding: 1.1rem;
+  animation: fadeInReqAddr 0.25s ease forwards;
+}
+
+.req-addr-custom-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e8f2eb;
+}
+
+.btn-restore-addr {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  color: #15803d;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-restore-addr:hover {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #4ade80;
+  transform: translateY(-1px);
+}
+
+@keyframes fadeInReqAddr {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 

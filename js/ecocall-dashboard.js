@@ -779,6 +779,127 @@
     }
   }
 
+  var userRegisteredAddress = null;
+  var isCustomAddressMode = false;
+
+  function obterDadosEnderecoUsuario() {
+    try {
+      var stored = sessionStorage.getItem('ecocall_user');
+      if (stored) {
+        var u = JSON.parse(stored);
+        return {
+          cep: u.cep || '',
+          tipo_logradouro: u.tipo_logradouro || 'Rua',
+          logradouro: u.logradouro || '',
+          numero: u.numero || '',
+          complemento: u.complemento || '',
+          bairro: u.bairro || '',
+          cidade: u.cidade || 'Santos',
+          uf: u.uf || 'SP'
+        };
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function preencherInputsEndereco(addr) {
+    if (!addr) return;
+    if (addr.cep !== undefined) setVal('req-cep', addr.cep);
+    if (addr.tipo_logradouro !== undefined) setVal('req-tipo-logradouro', addr.tipo_logradouro || 'Rua');
+    if (addr.logradouro !== undefined) setVal('req-logradouro', addr.logradouro);
+    if (addr.numero !== undefined) setVal('req-numero', addr.numero);
+    if (addr.complemento !== undefined) setVal('req-complemento', addr.complemento);
+    if (addr.bairro !== undefined) setVal('req-bairro', addr.bairro);
+    if (addr.cidade !== undefined) setVal('req-cidade', addr.cidade || 'Santos');
+    if (addr.uf !== undefined) {
+      setVal('req-uf', addr.uf || 'SP');
+      if (addr.cidade) {
+        carregarCidadesReq(addr.cidade);
+      }
+    }
+  }
+
+  function formatarEnderecoLegivel(addr) {
+    if (!addr || (!addr.logradouro && !addr.cep && !addr.bairro)) {
+      return 'Nenhum endereço cadastrado no seu perfil ainda. Clique abaixo para preencher.';
+    }
+    var tipo = addr.tipo_logradouro ? addr.tipo_logradouro + ' ' : '';
+    var log = addr.logradouro ? (addr.logradouro.toLowerCase().startsWith(tipo.trim().toLowerCase()) ? addr.logradouro : tipo + addr.logradouro) : 'Endereço sem logradouro';
+    var num = addr.numero ? ', ' + addr.numero : ', S/N';
+    var comp = addr.complemento ? ' (' + addr.complemento + ')' : '';
+    var bai = addr.bairro ? ' - ' + addr.bairro : '';
+    var cid = addr.cidade ? ', ' + addr.cidade : ', Santos';
+    var uf = addr.uf ? '/' + addr.uf : '/SP';
+    var cep = addr.cep ? ' — CEP: ' + addr.cep : '';
+    return log + num + comp + bai + cid + uf + cep;
+  }
+
+  function atualizarVisualizacaoEnderecoModal() {
+    var tabResidencial = document.getElementById('btn-tab-addr-residencial');
+    var tabOutros = document.getElementById('btn-tab-addr-outros');
+    var regCard = document.getElementById('req-addr-registered-card');
+    var customForm = document.getElementById('req-addr-custom-form');
+    var badge = document.getElementById('req-addr-status-badge');
+    var previewText = document.getElementById('req-addr-preview-text');
+
+    userRegisteredAddress = obterDadosEnderecoUsuario();
+    var temEnderecoCadastrado = userRegisteredAddress && (userRegisteredAddress.logradouro || userRegisteredAddress.cep || userRegisteredAddress.bairro);
+
+    if (previewText && userRegisteredAddress) {
+      previewText.textContent = formatarEnderecoLegivel(userRegisteredAddress);
+    }
+
+    if (isCustomAddressMode || !temEnderecoCadastrado) {
+      if (tabResidencial) tabResidencial.classList.remove('active');
+      if (tabOutros) tabOutros.classList.add('active');
+      if (regCard) regCard.style.display = 'none';
+      if (customForm) customForm.style.display = 'block';
+      if (badge) {
+        badge.textContent = '📍 Outro Endereço';
+        badge.className = 'req-addr-badge badge-custom';
+      }
+    } else {
+      if (tabResidencial) tabResidencial.classList.add('active');
+      if (tabOutros) tabOutros.classList.remove('active');
+      if (regCard) regCard.style.display = 'block';
+      if (customForm) customForm.style.display = 'none';
+      if (badge) {
+        badge.textContent = '✓ Endereço Residencial';
+        badge.className = 'req-addr-badge badge-default';
+      }
+      preencherInputsEndereco(userRegisteredAddress);
+    }
+  }
+
+  function selecionarTipoEndereco(tipo) {
+    if (tipo === 'outros') {
+      isCustomAddressMode = true;
+      atualizarVisualizacaoEnderecoModal();
+      var cepInput = document.getElementById('req-cep');
+      if (cepInput) cepInput.focus();
+      window.toast('📍 Modo "Outros" selecionado. Digite o endereço ou consulte pelo CEP.');
+    } else {
+      userRegisteredAddress = obterDadosEnderecoUsuario();
+      if (!userRegisteredAddress || (!userRegisteredAddress.logradouro && !userRegisteredAddress.cep)) {
+        window.toast('⚠ Você ainda não possui endereço residencial no perfil. Preencha os campos abaixo.');
+        selecionarTipoEndereco('outros');
+        return;
+      }
+      isCustomAddressMode = false;
+      preencherInputsEndereco(userRegisteredAddress);
+      atualizarVisualizacaoEnderecoModal();
+      window.toast('🏠 Endereço residencial selecionado como padrão.');
+    }
+  }
+
+  function alternarParaEnderecoPersonalizado() {
+    selecionarTipoEndereco('outros');
+  }
+
+  function restaurarEnderecoPadrao() {
+    selecionarTipoEndereco('residencial');
+  }
+
   function openRequestModal() {
     var overlay = document.getElementById('req-overlay');
     var modal = document.getElementById('request-modal');
@@ -795,18 +916,27 @@
 
     carregarEmpresasNoSelect();
 
-    try {
-      var stored = sessionStorage.getItem('ecocall_user');
-      if (stored) {
-        var u = JSON.parse(stored);
-        if (u.cep) setVal('req-cep', u.cep);
-        if (u.logradouro) setVal('req-logradouro', u.logradouro);
-        if (u.numero) setVal('req-numero', u.numero);
-        if (u.bairro) setVal('req-bairro', u.bairro);
-        if (u.cidade) setVal('req-cidade', u.cidade);
-        if (u.uf) setVal('req-uf', u.uf);
-      }
-    } catch(e) {}
+    // Conecta com o endereço já cadastrado do usuário como padrão
+    userRegisteredAddress = obterDadosEnderecoUsuario();
+    var temEndereco = userRegisteredAddress && (userRegisteredAddress.logradouro || userRegisteredAddress.cep || userRegisteredAddress.bairro);
+    
+    isCustomAddressMode = !temEndereco;
+    preencherInputsEndereco(userRegisteredAddress);
+    atualizarVisualizacaoEnderecoModal();
+
+    // Sincroniza em segundo plano com a API para garantir dados atualizados
+    if (window.apiFetch) {
+      window.apiFetch('api/auth/me.php').then(function (res) {
+        if (res && res.authenticated && res.user) {
+          try { sessionStorage.setItem('ecocall_user', JSON.stringify(res.user)); } catch(e) {}
+          userRegisteredAddress = obterDadosEnderecoUsuario();
+          if (!isCustomAddressMode) {
+            preencherInputsEndereco(userRegisteredAddress);
+            atualizarVisualizacaoEnderecoModal();
+          }
+        }
+      }).catch(function() {});
+    }
   }
 
   function closeRequestModal() {
@@ -926,6 +1056,7 @@
     var turno = turnoInput ? turnoInput.value : 'Manhã (08h - 12h)';
 
     var cep = (document.getElementById('req-cep') || {}).value || '';
+    var tipoLog = (document.getElementById('req-tipo-logradouro') || {}).value || 'Rua';
     var logradouro = (document.getElementById('req-logradouro') || {}).value || '';
     var numero = (document.getElementById('req-numero') || {}).value || '';
     var complemento = (document.getElementById('req-complemento') || {}).value || '';
@@ -934,12 +1065,20 @@
     var cidade = (document.getElementById('req-cidade') || {}).value || 'Santos';
 
     if (!logradouro || !numero || !bairro) {
-      window.toast('⚠ Preencha os campos obrigatórios do endereço de retirada.');
+      if (!isCustomAddressMode) {
+        window.toast('⚠ Seu endereço cadastrado está incompleto. Clique em "Alterar endereço" para preencher.');
+        alternarParaEnderecoPersonalizado();
+      } else {
+        window.toast('⚠ Preencha os campos obrigatórios do endereço de retirada (Logradouro, Número e Bairro).');
+      }
       return;
     }
 
-    var compPart = complemento ? ' ' + complemento : '';
-    var fullAddress = logradouro + ', ' + numero + compPart + ' - ' + bairro + ', ' + cidade + '/' + uf + ' (CEP: ' + cep + ')';
+    var prefixoLog = logradouro.toLowerCase().startsWith(tipoLog.toLowerCase()) ? '' : (tipoLog + ' ');
+    var logradouroCompleto = prefixoLog + logradouro;
+    var compPart = complemento ? ' (' + complemento + ')' : '';
+    var cepPart = cep ? ' (CEP: ' + cep + ')' : '';
+    var fullAddress = logradouroCompleto + ', ' + numero + compPart + ' - ' + bairro + ', ' + cidade + '/' + uf + cepPart;
 
     var dateInput = document.getElementById('req-date');
     var rawDate = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().split('T')[0];
@@ -1132,4 +1271,7 @@
   window.closeEvalModal = closeEvalModal;
   window.setRating = setRating;
   window.submitEvaluation = submitEvaluation;
+  window.selecionarTipoEndereco = selecionarTipoEndereco;
+  window.alternarParaEnderecoPersonalizado = alternarParaEnderecoPersonalizado;
+  window.restaurarEnderecoPadrao = restaurarEnderecoPadrao;
 })();
