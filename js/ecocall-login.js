@@ -211,10 +211,13 @@
 
     showToast('Atualizando sua senha...');
 
+    var targetEmail = lastSentIdentificador || (document.getElementById('forgot-identificador') ? document.getElementById('forgot-identificador').value.trim() : '') || (emailInput ? emailInput.value.trim() : '');
+
     window.apiFetch('api/auth/reset_password.php', {
       method: 'POST',
       body: {
-        identificador: lastSentIdentificador,
+        identificador: targetEmail,
+        email: targetEmail,
         codigo: code,
         nova_senha: newPwd
       }

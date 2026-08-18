@@ -43,10 +43,19 @@
       options.body = JSON.stringify(options.body);
     }
     return fetch(endpoint, options)
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        return res.text().then(function (text) {
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('API Non-JSON Response from ' + endpoint + ':', text);
+            return { error: 'Resposta inesperada do servidor: ' + (text ? text.substring(0, 120) : 'vazia') };
+          }
+        });
+      })
       .catch(function (err) {
         console.error('API Error:', err);
-        return { error: 'Falha na comunicação com o servidor PHP.' };
+        return { error: 'Falha de conexão com o servidor. Verifique se o Apache/PHP está ativo no XAMPP.' };
       });
   }
 

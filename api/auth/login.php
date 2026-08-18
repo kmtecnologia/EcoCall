@@ -18,12 +18,7 @@ $email = filter_var(trim($data['email'] ?? ''), FILTER_VALIDATE_EMAIL);
 $senha = $data['password'] ?? $data['senha'] ?? '';
 
 if (!$email || empty($senha)) {
-    sendJsonResponse(['error' => 'Por favor, informe um e-mail válido e a senha.'], 400);
-}
-
-$valEmail = validarEmailReal($email);
-if (!$valEmail['valido']) {
-    sendJsonResponse(['error' => $valEmail['motivo']], 400);
+    sendJsonResponse(['error' => 'Por favor, informe um e-mail válido e sua senha.'], 400);
 }
 
 $pdo = getDBConnection();

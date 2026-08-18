@@ -123,16 +123,22 @@ function validarEmailReal($email) {
         return ['valido' => false, 'motivo' => 'E-mails temporários, descartáveis ou fictícios não são permitidos por motivos de segurança.'];
     }
 
-    // Checagem de servidores de e-mail (MX / A) se houver conexão com DNS
-    // Em ambiente local isolado, permite ecocall.com e santistaambiental.com.br
-    $allowedDevDomains = ['ecocall.com', 'santistaambiental.com.br', 'terrasantos.com.br', 'localhost'];
-    if (!in_array($dominio, $allowedDevDomains, true)) {
-        if (function_exists('checkdnsrr')) {
-            $hasMx = @checkdnsrr($dominio, 'MX');
-            $hasA  = @checkdnsrr($dominio, 'A');
-            if (!$hasMx && !$hasA) {
-                return ['valido' => false, 'motivo' => 'O domínio do e-mail informado (@' . $dominio . ') não possui servidores de e-mail válidos na internet.'];
-            }
+    // Lista de domínios conhecidos para validação instantânea sem espera de DNS
+    $trustedDomains = [
+        'ecocall.com', 'senacsp.edu.br', 'senac.br', 'gmail.com', 'hotmail.com',
+        'outlook.com', 'yahoo.com', 'yahoo.com.br', 'live.com', 'icloud.com',
+        'uol.com.br', 'bol.com.br', 'terra.com.br', 'santistaambiental.com.br',
+        'terrasantos.com.br', 'localhost'
+    ];
+    if (in_array($dominio, $trustedDomains, true)) {
+        return ['valido' => true];
+    }
+
+    if (function_exists('checkdnsrr')) {
+        $hasMx = @checkdnsrr($dominio, 'MX');
+        $hasA  = @checkdnsrr($dominio, 'A');
+        if (!$hasMx && !$hasA) {
+            return ['valido' => false, 'motivo' => 'O domínio do e-mail informado (@' . $dominio . ') não possui servidores válidos de e-mail na internet.'];
         }
     }
 
@@ -140,11 +146,17 @@ function validarEmailReal($email) {
 }
 
 function sendJsonResponse($data, $statusCode = 200) {
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
     if (!headers_sent()) {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
         header('Content-Type: application/json; charset=utf-8');
     }
     http_response_code($statusCode);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
