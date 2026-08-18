@@ -32,14 +32,7 @@ $stmtCheck = $pdo->prepare("
     SELECT id, conta_id, identificador, tipo_conta, expira_em, utilizado 
     FROM password_resets 
     WHERE codigo = :cod 
-      AND (
-          identificador = :email 
-          OR conta_id IN (
-              SELECT id FROM usuarios WHERE email = :email
-              UNION
-              SELECT id FROM empresas WHERE email = :email
-          )
-      )
+      AND LOWER(identificador) = LOWER(:email)
     ORDER BY id DESC LIMIT 1
 ");
 
@@ -76,24 +69,25 @@ if (strtotime($resetRecord['expira_em']) < time()) {
 $hashNovaSenha = password_hash($novaSenha, PASSWORD_DEFAULT);
 $tipoConta = $resetRecord['tipo_conta'] ?? 'user';
 $contaId = !empty($resetRecord['conta_id']) ? (int)$resetRecord['conta_id'] : null;
+$targetEmail = !empty($resetRecord['identificador']) ? $resetRecord['identificador'] : $email;
 
-// 2. Atualiza a senha na tabela correspondente
+// 2. Atualiza a senha na tabela correspondente e garante que a conta fique ativa e com e-mail verificado
 if ($tipoConta === 'empresa') {
     if ($contaId) {
-        $stmtUpd = $pdo->prepare("UPDATE empresas SET senha = :senha WHERE id = :cid");
+        $stmtUpd = $pdo->prepare("UPDATE empresas SET senha = :senha, status_conta = 'ativo', email_verificado = 1 WHERE id = :cid");
         $stmtUpd->execute([':senha' => $hashNovaSenha, ':cid' => $contaId]);
     } else {
-        $stmtUpd = $pdo->prepare("UPDATE empresas SET senha = :senha WHERE email = :email");
-        $stmtUpd->execute([':senha' => $hashNovaSenha, ':email' => $email]);
+        $stmtUpd = $pdo->prepare("UPDATE empresas SET senha = :senha, status_conta = 'ativo', email_verificado = 1 WHERE LOWER(email) = LOWER(:email)");
+        $stmtUpd->execute([':senha' => $hashNovaSenha, ':email' => $targetEmail]);
     }
 } else {
     // Usuário cidadão
     if ($contaId) {
-        $stmtUpd = $pdo->prepare("UPDATE usuarios SET senha = :senha WHERE id = :cid");
+        $stmtUpd = $pdo->prepare("UPDATE usuarios SET senha = :senha, status_conta = 'ativo', email_verificado = 1 WHERE id = :cid");
         $stmtUpd->execute([':senha' => $hashNovaSenha, ':cid' => $contaId]);
     } else {
-        $stmtUpd = $pdo->prepare("UPDATE usuarios SET senha = :senha WHERE email = :email");
-        $stmtUpd->execute([':senha' => $hashNovaSenha, ':email' => $email]);
+        $stmtUpd = $pdo->prepare("UPDATE usuarios SET senha = :senha, status_conta = 'ativo', email_verificado = 1 WHERE LOWER(email) = LOWER(:email)");
+        $stmtUpd->execute([':senha' => $hashNovaSenha, ':email' => $targetEmail]);
     }
 }
 
