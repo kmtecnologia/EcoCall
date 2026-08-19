@@ -44,7 +44,15 @@ if (!stripos($enderecoColeta, 'Santos')) {
     sendJsonResponse(['error' => 'O serviço de coleta do EcoCall opera exclusivamente no município de Santos/SP. Por favor, informe um endereço de retirada em Santos.'], 400);
 }
 
-$protocolo = date('Ymd') . '-' . rand(100, 999);
+// Validação estrita de CEP de Santos (deve começar obrigatoriamente com '110')
+if (preg_match('/(?:CEP:?\s*|)(\d{5})-?(\d{3})/i', $enderecoColeta, $matches)) {
+    $cepDigits = $matches[1] . $matches[2];
+    if (substr($cepDigits, 0, 3) !== '110') {
+        sendJsonResponse(['error' => 'Atendimento exclusivo em Santos/SP! O CEP (' . $cepDigits . ') não pertence ao município de Santos (o CEP deve começar com 110).'], 400);
+    }
+}
+
+$protocolo = 'ECO-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
 $stmt = $pdo->prepare("
     INSERT INTO coletas (usuario_id, empresa_id, tipo_residuo, peso_estimado_kg, data_agendada, turno, endereco_coleta, status, observacoes, protocolo)

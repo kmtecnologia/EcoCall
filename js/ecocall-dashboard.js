@@ -961,10 +961,14 @@
     var modal = document.getElementById('request-modal');
     var dateInput = document.getElementById('req-date');
 
-    if (dateInput && !dateInput.value) {
-      var nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + 2);
-      dateInput.value = nextDate.toISOString().split('T')[0];
+    if (dateInput) {
+      var todayStr = new Date().toISOString().split('T')[0];
+      dateInput.min = todayStr;
+      if (!dateInput.value || dateInput.value < todayStr) {
+        var nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + 1);
+        dateInput.value = nextDate.toISOString().split('T')[0];
+      }
     }
 
     if (overlay) overlay.classList.add('open');
@@ -1028,7 +1032,19 @@
       return;
     }
 
-    window.toast('🔍 Consultando CEP...');
+    // Validação Estrita: Todos os CEPs de Santos/SP começam exclusivamente com "110" (faixa 11000-000 a 11099-999)
+    if (!cep.startsWith('110')) {
+      window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP deve começar com "110" (faixa 11000 a 11099). Não atendemos fora de Santos.');
+      setVal('req-cep', '');
+      setVal('req-logradouro', '');
+      setVal('req-bairro', '');
+      setVal('req-numero', '');
+      setVal('req-complemento', '');
+      if (cepInput) cepInput.focus();
+      return;
+    }
+
+    window.toast('🔍 Consultando CEP de Santos...');
 
     fetch('https://viacep.com.br/ws/' + cep + '/json/')
       .then(function (res) { return res.json(); })
@@ -1042,11 +1058,12 @@
         var uf = (data.uf || '').trim().toUpperCase();
 
         if (localidade !== 'santos' || uf !== 'SP') {
-          window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP ' + cep + ' pertence a ' + data.localidade + '/' + data.uf + '. Por favor, informe um CEP de Santos (11000 a 11099).');
+          window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP ' + cep + ' pertence a ' + data.localidade + '/' + data.uf + '. Por favor, informe um CEP de Santos (iniciado por 110).');
           setVal('req-cep', '');
           setVal('req-logradouro', '');
           setVal('req-bairro', '');
           setVal('req-numero', '');
+          setVal('req-complemento', '');
           if (cepInput) cepInput.focus();
           return;
         }
@@ -1114,6 +1131,16 @@
       return;
     }
 
+    if (isCustomAddressMode) {
+      var cleanCep = cep.replace(/\D/g, '');
+      if (!cleanCep || cleanCep.length !== 8 || !cleanCep.startsWith('110')) {
+        window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP informado no modo "Outros" deve ser de Santos e começar com "110" (ex: 11000 a 11099).');
+        var cepInput = document.getElementById('req-cep');
+        if (cepInput) cepInput.focus();
+        return;
+      }
+    }
+
     if (!logradouro || !numero || !bairro) {
       if (!isCustomAddressMode) {
         window.toast('⚠ Seu endereço cadastrado está incompleto. Alterne para "Outros" para preencher.');
@@ -1145,6 +1172,12 @@
       observacoes: notes
     };
 
+    var submitBtn = document.querySelector('.btn-submit-modal');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Agendando...';
+    }
+
     window.toast('⏳ Enviando solicitação de coleta...');
 
     if (window.apiFetch) {
@@ -1152,6 +1185,11 @@
         method: 'POST',
         body: payload
       }).then(function (res) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirmar Solicitação →';
+        }
+
         if (res && res.success) {
           window.toast('🎉 ' + (res.message || 'Solicitação agendada com sucesso! Protocolo: ' + res.protocolo));
           closeRequestModal();
@@ -1163,6 +1201,10 @@
           window.toast('❌ ' + (res.error || 'Erro ao agendar coleta.'));
         }
       }).catch(function () {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirmar Solicitação →';
+        }
         window.toast('❌ Erro de conexão ao enviar solicitação.');
       });
     }

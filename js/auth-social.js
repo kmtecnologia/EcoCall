@@ -6,11 +6,17 @@
 (function () {
   'use strict';
 
+  function getDynamicRedirectUri() {
+    var path = window.location.pathname;
+    var dir = path.substring(0, path.lastIndexOf('/') + 1);
+    return window.location.origin + dir + 'oauth_callback.html';
+  }
+
   var oauthConfig = {
     google_client_id: '',
     microsoft_client_id: '',
     microsoft_tenant_id: 'common',
-    redirect_uri: window.location.origin + '/EcoCall/oauth_callback.html'
+    redirect_uri: getDynamicRedirectUri()
   };
 
   var popupWindow = null;
@@ -25,7 +31,7 @@
           oauthConfig.google_client_id = data.config.google_client_id || '';
           oauthConfig.microsoft_client_id = data.config.microsoft_client_id || '';
           oauthConfig.microsoft_tenant_id = data.config.microsoft_tenant_id || 'common';
-          oauthConfig.redirect_uri = window.location.origin + '/EcoCall/oauth_callback.html';
+          oauthConfig.redirect_uri = getDynamicRedirectUri();
           inicializarGoogleOneTap();
         }
       })

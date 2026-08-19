@@ -4,6 +4,7 @@
    ========================================================================== */
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/mailer.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJsonResponse(['error' => 'Método não permitido.'], 405);
@@ -89,6 +90,32 @@ if ($novoStatus === 'concluido' && $coleta['status'] !== 'concluido') {
     }
     $stmtU = $pdo->prepare("UPDATE usuarios SET pontos = pontos + 50 WHERE id = :uid");
     $stmtU->execute([':uid' => $coleta['usuario_id']]);
+
+    // Dispara notificação por e-mail exclusivamente ao finalizar o chamado
+    try {
+        $stmtClient = $pdo->prepare("SELECT nome, email FROM usuarios WHERE id = :uid");
+        $stmtClient->execute([':uid' => $coleta['usuario_id']]);
+        $client = $stmtClient->fetch();
+
+        if ($client && !empty($client['email'])) {
+            $protocoloHost = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+            $hostName = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $linkPdf = $protocoloHost . $hostName . '/EcoCall/api/coletas/pdf.php?protocolo=' . urlencode($protocolo) . '&print=1';
+
+            $assunto = "EcoCall — Sua Coleta Seletiva foi Concluída com Sucesso! 🌿";
+            $msgHtml = "<p>Olá, <strong>" . htmlspecialchars($client['nome']) . "</strong>!</p>" .
+                       "<p>Informamos que a sua solicitação de coleta seletiva (Protocolo: <strong>{$protocolo}</strong>) foi <strong>concluída e finalizada</strong> com sucesso pela equipe parceira!</p>" .
+                       "<div style='background:#ecfdf5;border:1px solid #10b981;border-radius:10px;padding:12px 18px;margin:15px 0;'>" .
+                       "<strong style='color:#065f46;'>🎉 Parabéns!</strong> Você acumulou <strong>+50 EcoPontos</strong> pela sua contribuição com o meio ambiente de Santos/SP." .
+                       "</div>" .
+                       "<p>Você já pode acessar e imprimir o comprovante oficial da ordem de serviço clicando no botão abaixo:</p>";
+
+            $corpoEmail = gerarTemplateEmailEcoCall("Coleta Concluída com Sucesso", $msgHtml, "📄 Visualizar Comprovante em PDF", $linkPdf);
+            @enviarEmail($client['email'], $client['nome'], $assunto, $corpoEmail);
+        }
+    } catch (Exception $e) {
+        // Log silencioso para não interromper a resposta JSON
+    }
 }
 
 $pdfUrl = 'api/coletas/pdf.php?protocolo=' . urlencode($protocolo) . '&print=1';

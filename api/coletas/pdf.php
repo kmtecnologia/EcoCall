@@ -48,7 +48,7 @@ class ColetaPDF extends FPDF
 
     function txt($str)
     {
-        return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', (string)$str);
+        return iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', (string)$str);
     }
 
     function Header()
@@ -124,15 +124,17 @@ $pdf->SetFont('Helvetica', '', 9);
 $pdf->SetTextColor(30, 30, 30);
 
 $clienteNome = $coleta['cliente_nome'] ?: 'Cidadão Registrado';
+$clienteCpf = $coleta['cliente_cpf'] ?: 'Não informado';
 $clienteEmail = $coleta['cliente_email'] ?: 'Não informado';
 $clienteTel = $coleta['cliente_telefone'] ?: 'Não informado';
 $clienteEnd = $coleta['endereco_coleta'] ?: 'Endereço cadastrado';
 $clienteCidade = ($coleta['cliente_cidade'] ?: 'Santos') . ' / ' . ($coleta['cliente_uf'] ?: 'SP');
 
 $pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Nome: ' . $clienteNome), 'L', 0);
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' E-mail: ' . $clienteEmail), 'R', 1);
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Telefone: ' . $clienteTel), 'L', 0);
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Município: ' . $clienteCidade), 'R', 1);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' CPF: ' . $clienteCpf), 'R', 1);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' E-mail: ' . $clienteEmail), 'L', 0);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Telefone: ' . $clienteTel), 'R', 1);
+$pdf->Cell(186, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Município: ' . $clienteCidade), 'LR', 1);
 $pdf->Cell(186, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Endereço de Retirada: ' . $clienteEnd), 'LRB', 1);
 
 $pdf->Ln(4);
@@ -177,11 +179,14 @@ $peso = number_format(floatval($coleta['peso_estimado_kg']), 1, ',', '.') . ' kg
 $turno = $coleta['turno'] ?: 'Manhã (08h - 12h)';
 $obs = $coleta['observacoes'] ?: 'Nenhuma instrução adicional gravada.';
 
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Resíduos: ' . $coleta['tipo_residuo']), 'L', 0);
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Massa Estimada: ' . $peso), 'R', 1);
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Data Agendada: ' . $dateFmt), 'L', 0);
-$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Período / Turno: ' . $turno), 'R', 1);
-$pdf->Cell(186, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', ' Instruções / Obs: ' . $obs), 'LRB', 1);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', ' Resíduos: ' . $coleta['tipo_residuo']), 'L', 0);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', ' Massa Estimada: ' . $peso), 'R', 1);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', ' Data Agendada: ' . $dateFmt), 'L', 0);
+$pdf->Cell(93, 6, iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', ' Período / Turno: ' . $turno), 'R', 1);
+
+$pdf->SetFont('Helvetica', '', 8);
+$pdf->Cell(186, 5, iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', ' Instruções / Obs:'), 'LR', 1);
+$pdf->MultiCell(186, 5, iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', ' ' . $obs), 'LRB', 'L');
 
 $pdf->Ln(6);
 
