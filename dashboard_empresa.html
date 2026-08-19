@@ -88,7 +88,7 @@
         <div class="topbar-right">
           <div class="user-location-badge status-active">
             <span class="dot-indicator">●</span>
-            <span class="status-label">Ativo no mapa</span>
+            <span class="status-label" id="emp-topbar-city">Santos, SP</span>
           </div>
 
           <div class="notif-bell-box" onclick="toast('Você tem 3 novos pedidos pendentes.')">
@@ -435,7 +435,13 @@
               <div class="profile-pic" id="emp-card-avatar">--</div>
               <h3 id="emp-card-name">Carregando...</h3>
               <p id="emp-card-email">...</p>
-              <button type="button" class="profile-pic-btn" onclick="toast('Logotipo sincronizado com o painel corporativo.')">Trocar logotipo</button>
+              
+              <input type="file" id="emp-avatar-file-input" accept="image/png, image/jpeg, image/webp, image/gif" style="display:none;" onchange="uploadAvatarEmpresa(this)">
+              
+              <div style="display:flex;gap:0.4rem;justify-content:center;margin-top:1rem;flex-wrap:wrap;">
+                <button type="button" class="profile-pic-btn" style="margin-top:0;" onclick="document.getElementById('emp-avatar-file-input').click()">📷 Trocar logotipo</button>
+                <button type="button" class="profile-pic-btn" id="btn-emp-remover-avatar" style="margin-top:0;color:#b53b3b;display:none;" onclick="removerAvatarEmpresa()">✕ Remover</button>
+              </div>
 
               <div style="margin-top:1.6rem;text-align:left;display:flex;flex-direction:column;gap:.65rem;">
                 <div style="display:flex;justify-content:space-between;font-size:.84rem;">
@@ -550,6 +556,22 @@
                   <button type="submit" class="btn-save" id="emp-btn-save">Salvar alterações</button>
                 </div>
               </form>
+
+              <!-- Zona de Perigo / Exclusão de Empresa -->
+              <div class="danger-zone-card">
+                <div class="danger-zone-header">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <h3>Zona de Perigo — Exclusão de Cadastro Corporativo</h3>
+                </div>
+                <p class="danger-zone-desc">
+                  Ao excluir o cadastro da empresa, seu perfil corporativo, área de atendimento, registros de pedidos e histórico de avaliações serão permanentemente excluídos da plataforma EcoCall. Esta ação é irreversível.
+                </p>
+                <button type="button" class="btn-danger-action" onclick="excluirCadastroEmpresa()">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  Excluir Cadastro da Empresa Permanentemente
+                </button>
+              </div>
+
             </div>
 
           </div>

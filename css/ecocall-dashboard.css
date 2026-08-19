@@ -149,6 +149,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .user-meta {
@@ -628,6 +630,31 @@ body {
   font-weight: 600;
 }
 
+/* Lista de Status do Perfil */
+.profile-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.status-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(14, 43, 22, 0.05);
+  font-size: 0.88rem;
+}
+
+.status-list-item:last-child {
+  border-bottom: none;
+}
+
+.status-item-name {
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
 /* Painel da Direita: Bloco de Chamada para o Mapa (CTA) */
 .cta-map-container {
   background: var(--bg-dark-secondary);
@@ -803,6 +830,8 @@ body {
   align-items: center; 
   justify-content: center;
   margin: 0 auto 1rem;
+  overflow: hidden;
+  position: relative;
 }
 
 .profile-side-card h3 { 
@@ -837,6 +866,60 @@ body {
   border-radius: 18px;
   padding: 1.8rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+/* Zona de Perigo / Exclusão de Conta */
+.danger-zone-card {
+  background: #ffffff;
+  border: 1.5px solid #fecaca;
+  border-radius: 18px;
+  padding: 1.8rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.03);
+}
+
+.danger-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.danger-zone-header h3 {
+  font-family: var(--font-syne);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.danger-zone-desc {
+  font-size: 0.86rem;
+  color: var(--text-grey);
+  line-height: 1.5;
+  margin-bottom: 1.2rem;
+}
+
+.btn-danger-action {
+  background: #ffffff;
+  border: 1.5px solid #f87171;
+  color: #dc2626;
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  font-family: var(--font-syne);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-danger-action:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
 }
 
 .form-row { 

@@ -13,7 +13,7 @@ $pdo = getDBConnection();
 
 if ($tipo === 'empresa') {
     $empresaId = $_SESSION['empresa_id'] ?? $userId;
-    $stmtEmp = $pdo->prepare("SELECT id, razao_social, cnpj, email, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, categoria, descricao, nota_media, coletas_concluidas, created_at FROM empresas WHERE id = :id");
+    $stmtEmp = $pdo->prepare("SELECT id, razao_social, cnpj, email, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, categoria, descricao, avatar_url, nota_media, coletas_concluidas, created_at FROM empresas WHERE id = :id");
     $stmtEmp->execute([':id' => $empresaId]);
     $empresa = $stmtEmp->fetch();
 
@@ -25,14 +25,15 @@ if ($tipo === 'empresa') {
                 'nome' => $empresa['razao_social'],
                 'email' => $empresa['email'],
                 'tipo' => 'empresa',
-                'empresa_id' => $empresa['id']
+                'empresa_id' => $empresa['id'],
+                'avatar_url' => $empresa['avatar_url'] ?? null
             ],
             'empresa' => $empresa
         ]);
     }
 
     // Fallback: empresa registrada na tabela usuarios
-    $stmtU = $pdo->prepare("SELECT id, nome, email, cpf, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, tipo, pontos, created_at FROM usuarios WHERE id = :id");
+    $stmtU = $pdo->prepare("SELECT id, nome, email, cpf, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, avatar_url, tipo, pontos, created_at FROM usuarios WHERE id = :id");
     $stmtU->execute([':id' => $userId]);
     $userAsEmp = $stmtU->fetch();
 
@@ -44,7 +45,8 @@ if ($tipo === 'empresa') {
                 'nome' => $userAsEmp['nome'],
                 'email' => $userAsEmp['email'],
                 'tipo' => 'empresa',
-                'empresa_id' => $userAsEmp['id']
+                'empresa_id' => $userAsEmp['id'],
+                'avatar_url' => $userAsEmp['avatar_url'] ?? null
             ],
             'empresa' => [
                 'id' => $userAsEmp['id'],
@@ -63,6 +65,7 @@ if ($tipo === 'empresa') {
                 'endereco' => $userAsEmp['endereco'],
                 'categoria' => 'Reciclagem Geral',
                 'descricao' => '',
+                'avatar_url' => $userAsEmp['avatar_url'] ?? null,
                 'nota_media' => 5.00,
                 'coletas_concluidas' => 0,
                 'created_at' => $userAsEmp['created_at']
@@ -72,7 +75,7 @@ if ($tipo === 'empresa') {
 
     sendJsonResponse(['error' => 'Empresa não encontrada.'], 404);
 } else {
-    $stmt = $pdo->prepare("SELECT id, nome, email, cpf, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, tipo, pontos, created_at FROM usuarios WHERE id = :id");
+    $stmt = $pdo->prepare("SELECT id, nome, email, cpf, telefone, cep, tipo_logradouro, logradouro, numero, complemento, bairro, cidade, uf, endereco, avatar_url, tipo, pontos, created_at FROM usuarios WHERE id = :id");
     $stmt->execute([':id' => $userId]);
     $user = $stmt->fetch();
 
@@ -97,6 +100,7 @@ if ($tipo === 'empresa') {
         'cidade' => $user['cidade'] ?? 'Santos',
         'uf' => $user['uf'] ?? 'SP',
         'endereco' => $user['endereco'],
+        'avatar_url' => $user['avatar_url'] ?? null,
         'tipo' => $isEmp ? 'empresa' : 'user',
         'pontos' => $user['pontos'] ?? 0,
         'empresa_id' => $isEmp ? $user['id'] : null,
@@ -115,6 +119,7 @@ if ($tipo === 'empresa') {
             'cidade' => $user['cidade'] ?? 'Santos',
             'uf' => $user['uf'] ?? 'SP',
             'categoria' => 'Reciclagem Geral',
+            'avatar_url' => $user['avatar_url'] ?? null,
             'coletas_concluidas' => 0,
             'created_at' => $user['created_at']
         ] : null

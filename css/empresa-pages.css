@@ -397,6 +397,8 @@
     align-items: center; 
     justify-content: center;
     margin: 0 auto 1rem;
+    overflow: hidden;
+    position: relative;
   }
   
   .profile-side-card h3 { font-family: var(--font-syne); font-size: 1.15rem; color: var(--text-dark); }
@@ -629,3 +631,57 @@
     cursor: pointer;
   }
   .btn-danger:hover { background: rgba(255,76,76,.18); }
+
+  /* Zona de Perigo / Exclusão de Cadastro */
+  .danger-zone-card {
+    background: #ffffff;
+    border: 1.5px solid #fecaca;
+    border-radius: 18px;
+    padding: 1.8rem;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.03);
+  }
+
+  .danger-zone-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .danger-zone-header h3 {
+    font-family: var(--font-syne);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #b91c1c;
+  }
+
+  .danger-zone-desc {
+    font-size: 0.86rem;
+    color: var(--text-grey);
+    line-height: 1.5;
+    margin-bottom: 1.2rem;
+  }
+
+  .btn-danger-action {
+    background: #ffffff;
+    border: 1.5px solid #f87171;
+    color: #dc2626;
+    padding: 0.65rem 1.2rem;
+    border-radius: 10px;
+    font-family: var(--font-syne);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-danger-action:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  }

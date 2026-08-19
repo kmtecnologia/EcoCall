@@ -91,17 +91,35 @@
     var parts = nome.split(' ').filter(Boolean);
     var initials = parts.map(function (n) { return n[0]; }).join('').substring(0, 2).toUpperCase() || 'EC';
     var cidade = (u.cidade || 'Santos') + (u.uf ? (', ' + u.uf) : '');
+    var avatarUrl = u.avatar_url || (u.empresa && u.empresa.avatar_url) || null;
 
     var avatarEls = document.querySelectorAll('#dash-sidebar-avatar, #pf-sidebar-avatar, .sidebar-footer .avatar-mini');
     var nameEls   = document.querySelectorAll('#dash-sidebar-name, #pf-sidebar-name, .sidebar-footer .user-name');
     var emailEls  = document.querySelectorAll('#dash-sidebar-email, #pf-sidebar-email, .sidebar-footer .user-email');
-    var cityEls   = document.querySelectorAll('#dash-topbar-city, #pf-topbar-city, .user-location-badge span:not(.dot)');
+    var cityEls   = document.querySelectorAll('#dash-topbar-city, #emp-topbar-city, #pf-topbar-city, .user-location-badge .status-label, .user-location-badge .label');
 
-    avatarEls.forEach(function (el) { el.textContent = initials; });
+    avatarEls.forEach(function (el) {
+      if (avatarUrl) {
+        el.innerHTML = '<img src="' + avatarUrl + '?v=' + Date.now() + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">';
+      } else {
+        el.textContent = initials;
+      }
+    });
+
+    // Atualiza o avatar dos cards de perfil
+    var profileCardAvatars = document.querySelectorAll('#usr-card-avatar, #emp-card-avatar, .profile-side-card .profile-pic');
+    profileCardAvatars.forEach(function (el) {
+      if (avatarUrl) {
+        el.innerHTML = '<img src="' + avatarUrl + '?v=' + Date.now() + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">';
+      } else {
+        el.textContent = initials;
+      }
+    });
+
     nameEls.forEach(function (el) { el.textContent = nome; });
     emailEls.forEach(function (el) { el.textContent = email; });
     cityEls.forEach(function (el) {
-      if (el.tagName === 'SPAN' && !el.classList.contains('dot')) {
+      if (!el.classList.contains('dot-indicator') && !el.classList.contains('dot')) {
         el.textContent = cidade;
       }
     });

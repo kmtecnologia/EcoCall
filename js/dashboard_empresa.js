@@ -760,12 +760,20 @@
       var statNota = document.getElementById('emp-card-nota');
       var statMembro = document.getElementById('emp-card-membro');
 
-      if (cardAvatar) cardAvatar.textContent = initials;
+      if (cardAvatar) {
+        if (d.avatar_url) {
+          cardAvatar.innerHTML = '<img src="' + d.avatar_url + '?v=' + Date.now() + '" alt="Logotipo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">';
+        } else {
+          cardAvatar.textContent = initials;
+        }
+      }
       if (cardName) cardName.textContent = name;
       if (cardEmail) cardEmail.textContent = email;
       if (statColetas) statColetas.textContent = (d.coletas_concluidas || 0) + ' coletas';
       if (statNota) statNota.textContent = (d.nota_media || '5.00') + ' ★';
       if (statMembro) statMembro.textContent = memberSince;
+
+      atualizarBotaoRemoverAvatarEmpresa(d.avatar_url);
 
       setVal('emp-input-nome', d.razao_social || d.nome);
       setVal('emp-input-cnpj', d.cnpj || d.cpf);
@@ -786,6 +794,88 @@
     }).catch(function (err) {
       console.warn('Erro ao carregar dados do perfil da empresa:', err);
     });
+  }
+
+  function uploadAvatarEmpresa(input) {
+    if (!input || !input.files || input.files.length === 0) return;
+    var file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      window.toast('❌ A imagem selecionada ultrapassa o limite de 5MB.');
+      input.value = '';
+      return;
+    }
+
+    var formData = new FormData();
+    formData.append('avatar', file);
+
+    window.toast('⏳ Enviando logotipo da empresa...');
+
+    fetch('api/auth/upload_avatar.php', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      input.value = '';
+      if (data && data.success) {
+        window.toast('✓ ' + (data.message || 'Logotipo atualizado!'));
+        try {
+          var u = JSON.parse(sessionStorage.getItem('ecocall_user') || '{}');
+          u.avatar_url = data.avatar_url;
+          if (u.empresa) u.empresa.avatar_url = data.avatar_url;
+          sessionStorage.setItem('ecocall_user', JSON.stringify(u));
+        } catch(e) {}
+
+        if (window.syncUserProfile) {
+          window.syncUserProfile();
+        }
+        carregarPerfilEmpresa();
+      } else {
+        window.toast('⚠ ' + (data.error || 'Falha ao atualizar logotipo.'));
+      }
+    })
+    .catch(function (err) {
+      input.value = '';
+      console.error('Erro no upload de logotipo:', err);
+      window.toast('⚠ Falha na comunicação com o servidor.');
+    });
+  }
+
+  function removerAvatarEmpresa() {
+    if (!confirm('Deseja remover o logotipo e voltar às iniciais?')) return;
+    window.toast('⏳ Removendo logotipo...');
+
+    fetch('api/auth/upload_avatar.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remover' })
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data && data.success) {
+        window.toast('✓ Logotipo removido.');
+        try {
+          var u = JSON.parse(sessionStorage.getItem('ecocall_user') || '{}');
+          u.avatar_url = null;
+          if (u.empresa) u.empresa.avatar_url = null;
+          sessionStorage.setItem('ecocall_user', JSON.stringify(u));
+        } catch(e) {}
+
+        if (window.syncUserProfile) {
+          window.syncUserProfile();
+        }
+        carregarPerfilEmpresa();
+      } else {
+        window.toast('⚠ ' + (data.error || 'Falha ao remover logotipo.'));
+      }
+    });
+  }
+
+  function atualizarBotaoRemoverAvatarEmpresa(avatarUrl) {
+    var btn = document.getElementById('btn-emp-remover-avatar');
+    if (btn) {
+      btn.style.display = avatarUrl ? 'inline-block' : 'none';
+    }
   }
 
   function salvarPerfilEmpresa(e) {
@@ -855,6 +945,38 @@
     });
   }
 
+  function excluirCadastroEmpresa() {
+    var confirm1 = confirm('⚠️ ATENÇÃO: Esta ação é definitiva e irreversível.\n\nTem certeza absoluta de que deseja excluir permanentemente o cadastro da empresa, atendimentos e histórico de avaliações da plataforma EcoCall?');
+    if (!confirm1) return;
+
+    var confirm2 = prompt('Digite "EXCLUIR" em letras maiúsculas para confirmar o encerramento definitivo do cadastro da empresa:');
+    if (confirm2 !== 'EXCLUIR') {
+      window.toast('ℹ️ Operação de exclusão corporativa cancelada.');
+      return;
+    }
+
+    window.toast('⏳ Excluindo cadastro da empresa...');
+
+    if (window.apiFetch) {
+      window.apiFetch('api/auth/delete_account.php', {
+        method: 'POST'
+      }).then(function (res) {
+        if (res && res.success) {
+          try { sessionStorage.removeItem('ecocall_user'); } catch (e) {}
+          window.toast('✓ ' + (res.message || 'Cadastro corporativo excluído com sucesso. Redirecionando...'));
+          setTimeout(function () {
+            window.location.replace('ecocall-home.html');
+          }, 1200);
+        } else {
+          window.toast('❌ ' + (res.error || 'Não foi possível excluir o cadastro da empresa.'));
+        }
+      }).catch(function (err) {
+        console.error('Erro ao excluir empresa:', err);
+        window.toast('❌ Falha na comunicação com o servidor.');
+      });
+    }
+  }
+
   /* ==========================================================================
      11. INICIALIZAÇÃO DO PAINEL DA EMPRESA
      ========================================================================== */
@@ -878,6 +1000,9 @@
   window.carregarPainelEmpresa = carregarPainelEmpresa;
   window.carregarPerfilEmpresa = carregarPerfilEmpresa;
   window.salvarPerfilEmpresa = salvarPerfilEmpresa;
+  window.uploadAvatarEmpresa = uploadAvatarEmpresa;
+  window.removerAvatarEmpresa = removerAvatarEmpresa;
+  window.excluirCadastroEmpresa = excluirCadastroEmpresa;
   window.carregarEstatisticasEmpresa = carregarEstatisticasEmpresa;
   window.atualizarStatusPedido = atualizarStatusPedido;
   window.mudarMesCalendario = mudarMesCalendario;

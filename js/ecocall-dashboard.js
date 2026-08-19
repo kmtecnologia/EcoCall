@@ -1,28 +1,29 @@
 /* ==========================================================================
    EcoCall — Painel do Usuário Cidadão (Dashboard Dinâmico & SPA Unificado)
-   Centraliza a lógica do Painel, Minhas Coletas, Empresas Salvas, Mapa Interativo (Leaflet),
-   Histórico de Pontuações, Modal de Solicitação com ViaCEP/IBGE, Avaliações e FPDF.
+   Centraliza a navegação SPA entre todas as abas (Painel, Minhas Coletas,
+   Empresas Salvas, Mapa Interativo, Histórico & Pontos, Meu Perfil),
+   gerenciamento de coletas, busca em tempo real, integração ViaCEP e FPDF.
    ========================================================================== */
 (function () {
   'use strict';
 
-  var currentFilter = 'all';
-  var currentSort = 'date-desc';
-  var empresasMateriaisMap = {};
+  var activeColetasFilter = 'all';
+  var currentColetasView = 'grid';
   var cachedColetas = [];
   var cachedEmpresas = [];
   var mapInstance = null;
   var currentEvalRating = 5;
+  var empresasMateriaisMap = {};
 
   var todosMateriais = [
-    { name: 'Plástico', icon: '♻️', tagClass: 'tag-plastic' },
-    { name: 'Papel', icon: '📦', tagClass: 'tag-paper' },
-    { name: 'Metal', icon: '🥫', tagClass: 'tag-metal' },
-    { name: 'Vidro', icon: '🍾', tagClass: 'tag-glass' },
-    { name: 'Eletrônicos', icon: '💻', tagClass: 'tag-elec' },
-    { name: 'Óleo de Cozinha', icon: '🛢️', tagClass: 'tag-amber' },
-    { name: 'Orgânico', icon: '🍎', tagClass: 'tag-organic' },
-    { name: 'Têxtil', icon: '👕', tagClass: 'tag-paper' }
+    { name: 'Plástico', icon: '♻️' },
+    { name: 'Papel', icon: '📦' },
+    { name: 'Metal', icon: '🥫' },
+    { name: 'Vidro', icon: '🍾' },
+    { name: 'Eletrônicos', icon: '💻' },
+    { name: 'Óleo de Cozinha', icon: '🛢️' },
+    { name: 'Orgânico', icon: '🍎' },
+    { name: 'Têxtil', icon: '👕' }
   ];
 
   var defaultSantosCompanies = [
@@ -35,6 +36,8 @@
     { id: 7, razao_social: 'Reciclar é Viver (Cooperativa Comunidade)', bairro: 'Vila Mathias', cidade: 'Santos', uf: 'SP', categoria: 'Vidros, Papéis e Papelão', nota_media: 4.8, lat: -23.9550, lng: -46.3280 },
     { id: 8, razao_social: 'Santista Ambiental', bairro: 'Gonzaga', cidade: 'Santos', uf: 'SP', categoria: 'Coleta Especial e Condomínios', nota_media: 5.0, lat: -23.9680, lng: -46.3340 }
   ];
+
+  var monthsNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   /* ==========================================================================
      1. CONTROLE DE NAVEGAÇÃO POR ABAS (SPA)
@@ -70,9 +73,9 @@
     var titlesMap = {
       dash: { title: 'Olá 👋', sub: 'Gere e acompanhe as suas contribuições sustentáveis.' },
       coletas: { title: 'Minhas Coletas 📋', sub: 'Acompanhe o histórico, status e solicite novas coletas.' },
-      empresas: { title: 'Empresas Salvas 🏢', sub: 'Conheça e solicite agendamentos com empresas parceiras.' },
-      mapa: { title: 'Ver no Mapa 🗺️', sub: 'Localize pontos de coleta e cooperativas na sua região.' },
-      historico: { title: 'Histórico de Atividades 🌱', sub: 'Seu registro completo de reciclagens e pontuações.' },
+      empresas: { title: 'Empresas Salvas 🏢', sub: 'Conheça e solicite agendamentos com empresas parceiras credenciadas.' },
+      mapa: { title: 'Ver no Mapa 🗺️', sub: 'Localize cooperativas, ecopontos e empresas coletoras na sua região.' },
+      historico: { title: 'Histórico & Pontos 🌱', sub: 'Seu extrato completo de reciclagens realizadas e pontuações.' },
       perfil: { title: 'Meu Perfil 👤', sub: 'Mantenha seus dados cadastrais e de acesso sempre atualizados.' }
     };
 
@@ -100,8 +103,10 @@
 
     if (subEl) subEl.textContent = info.sub;
 
-    if (tabName === 'coletas' && window.carregarColetasDoBanco) {
-      window.carregarColetasDoBanco();
+    if (tabName === 'coletas') {
+      carregarColetasDoBanco();
+    } else if (tabName === 'empresas') {
+      renderizarEmpresasDisponiveis(cachedEmpresas.length > 0 ? cachedEmpresas : defaultSantosCompanies);
     } else if (tabName === 'mapa') {
       setTimeout(function () {
         initLeafletMap(cachedEmpresas.length > 0 ? cachedEmpresas : defaultSantosCompanies);
@@ -125,6 +130,7 @@
       window.syncUserProfile();
     }
 
+    // Carrega Estatísticas Principais
     window.apiFetch('api/dashboard/stats.php').then(function (res) {
       if (res && res.success && res.stats) {
         var st = res.stats;
@@ -133,39 +139,60 @@
         var mPeso = document.getElementById('dash-m-peso');
         var mCo2 = document.getElementById('dash-m-co2');
 
-        if (mConcluidas) mConcluidas.textContent = st.coletas_concluidas || 0;
-        if (mPontos) mPontos.innerHTML = (st.pontos || 0) + ' <span class="m-unit">pts</span>';
-        if (mPeso) mPeso.innerHTML = (st.peso_total_kg || 0) + ' <span class="m-unit">kg</span>';
-        if (mCo2) mCo2.textContent = '~' + (st.co2_economizado_kg || 0) + ' kg CO₂ evitados';
+        var histPontos = document.getElementById('hist-stat-pontos');
+        var histColetas = document.getElementById('hist-stat-coletas');
+        var histCo2 = document.getElementById('hist-stat-co2');
+
+        var concluidas = st.coletas_concluidas || 0;
+        var pontos = st.pontos || 0;
+        var peso = st.peso_total_kg || 0;
+        var co2 = st.co2_economizado_kg || 0;
+
+        if (mConcluidas) mConcluidas.textContent = concluidas;
+        if (mPontos) mPontos.innerHTML = pontos + ' <span class="m-unit">pts</span>';
+        if (mPeso) mPeso.innerHTML = peso + ' <span class="m-unit">kg</span>';
+        if (mCo2) mCo2.textContent = '~' + co2 + ' kg CO₂ evitados';
+
+        if (histPontos) histPontos.textContent = pontos + ' pts';
+        if (histColetas) histColetas.textContent = concluidas;
+        if (histCo2) histCo2.textContent = co2 + ' kg';
       }
     }).catch(function (err) {
       console.warn('Erro ao carregar estatísticas:', err);
     });
 
+    // Carrega Coletas do Usuário
     window.apiFetch('api/coletas/index.php').then(function (res) {
       if (res && res.success && Array.isArray(res.coletas)) {
         cachedColetas = res.coletas;
+        atualizarContadoresColetas(res.coletas);
         renderizarTabelaColetas(res.coletas);
-        renderizarColetasDoBanco(res.coletas);
+        renderizarMinhasColetas(res.coletas);
         renderizarHistoricoAtividades(res.coletas);
       }
     }).catch(function (err) {
       console.warn('Erro ao carregar coletas recentes:', err);
     });
 
+    // Carrega Empresas Parceiras
     window.apiFetch('api/empresas/index.php').then(function (res) {
-      if (res && res.success && Array.isArray(res.empresas)) {
+      if (res && res.success && Array.isArray(res.empresas) && res.empresas.length > 0) {
         cachedEmpresas = res.empresas;
-        renderizarEmpresasDisponiveis(res.empresas);
-        var mEmpresas = document.getElementById('dash-m-empresas');
-        if (mEmpresas) mEmpresas.textContent = res.empresas.length;
+      } else {
+        cachedEmpresas = defaultSantosCompanies;
       }
+      renderizarEmpresasDisponiveis(cachedEmpresas);
+      var mEmpresas = document.getElementById('dash-m-empresas');
+      var empCountVal = document.getElementById('emp-count-val');
+      if (mEmpresas) mEmpresas.textContent = cachedEmpresas.length;
+      if (empCountVal) empCountVal.textContent = cachedEmpresas.length;
+      carregarEmpresasNoSelect();
     }).catch(function (err) {
       console.warn('Erro ao carregar empresas parceiras:', err);
       cachedEmpresas = defaultSantosCompanies;
+      renderizarEmpresasDisponiveis(cachedEmpresas);
+      carregarEmpresasNoSelect();
     });
-
-    carregarEmpresasNoSelect();
 
     var params = new URLSearchParams(location.search);
     var targetTab = params.get('tab') || (location.hash || '').replace('#', '').toLowerCase();
@@ -174,21 +201,25 @@
     }
   }
 
+  /* ==========================================================================
+     3. RENDERIZAÇÃO DA TABELA RECENTES (PAINEL GERAL)
+     ========================================================================== */
   function renderizarTabelaColetas(coletas) {
     var tbody = document.getElementById('dash-coletas-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (coletas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-grey);padding:2rem;">Você ainda não possui solicitações de coleta ativas. <a href="javascript:void(0)" onclick="switchUserTab(\'coletas\')" style="color:var(--primary-color);font-weight:600;">Clique aqui para agendar</a></td></tr>';
+    if (!coletas || coletas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-grey);padding:2rem;">Você ainda não possui solicitações de coleta ativas. <a href="javascript:void(0)" onclick="openRequestModal()" style="color:var(--brand-green-hover);font-weight:600;">Clique aqui para agendar</a></td></tr>';
       return;
     }
 
     var statusMap = {
-      'pendente': { label: 'Pendente', badgeCls: 'badge-sched', btnText: 'Detalhes' },
-      'agendado': { label: 'Agendada', badgeCls: 'badge-sched', btnText: 'Detalhes' },
-      'concluido': { label: 'Concluída', badgeCls: 'badge-done', btnText: 'Comprovante PDF' },
-      'cancelado': { label: 'Cancelada', badgeCls: 'badge-cancel', btnText: 'Reagendar' }
+      'pendente': { label: 'Pendente', badgeCls: 'badge-sched' },
+      'agendado': { label: 'Agendada', badgeCls: 'badge-sched' },
+      'em_andamento': { label: 'Em andamento', badgeCls: 'badge-prog' },
+      'concluido': { label: 'Concluída', badgeCls: 'badge-done' },
+      'cancelado': { label: 'Cancelada', badgeCls: 'badge-cancel' }
     };
 
     coletas.slice(0, 5).forEach(function (c) {
@@ -199,23 +230,263 @@
       var parts = rawDate.split('-');
       var dateFmt = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
       var stInfo = statusMap[c.status] || statusMap['agendado'];
+      var orderId = c.protocolo || ('COL-' + strPad(c.id, 6));
+
+      var btnHtml = '<button class="btn-card-action" onclick="switchUserTab(\'coletas\')">Detalhes</button>';
+      if (c.status === 'concluido') {
+        btnHtml = '<button class="btn-card-action primary" onclick="imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
+      }
 
       tr.innerHTML =
         '<td>' +
           '<div class="table-comp-info">' +
             '<div class="comp-letter text-green-bg">' + letter + '</div>' +
-            '<span>' + companyName + '</span>' +
+            '<div><strong>' + companyName + '</strong><div style="font-size:0.75rem;color:var(--text-grey);">' + orderId + '</div></div>' +
           '</div>' +
         '</td>' +
         '<td><span class="etag tag-plastic">' + (c.tipo_residuo || 'Resíduos Recicláveis') + '</span></td>' +
         '<td>' + dateFmt + '</td>' +
         '<td><span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span></td>' +
-        '<td><button class="btn-table-details" onclick="switchUserTab(\'coletas\')">' + stInfo.btnText + '</button></td>';
+        '<td>' + btnHtml + '</td>';
 
       tbody.appendChild(tr);
     });
   }
 
+  /* ==========================================================================
+     4. RENDERIZAÇÃO DA ABA MINHAS COLETAS (CARDS & TABELA)
+     ========================================================================== */
+  function carregarColetasDoBanco() {
+    if (!window.apiFetch) return;
+    window.apiFetch('api/coletas/index.php').then(function (res) {
+      if (res && res.success && Array.isArray(res.coletas)) {
+        cachedColetas = res.coletas;
+        atualizarContadoresColetas(res.coletas);
+        renderizarMinhasColetas(res.coletas);
+        renderizarHistoricoAtividades(res.coletas);
+      }
+    });
+  }
+
+  function atualizarContadoresColetas(coletas) {
+    var total = coletas.length;
+    var sched = 0;
+    var prog = 0;
+    var done = 0;
+    var cancel = 0;
+
+    coletas.forEach(function (c) {
+      if (c.status === 'agendado' || c.status === 'pendente') sched++;
+      else if (c.status === 'em_andamento') prog++;
+      else if (c.status === 'concluido') done++;
+      else if (c.status === 'cancelado') cancel++;
+    });
+
+    var badgeColetas = document.getElementById('usr-badge-coletas');
+    var notifCount = document.getElementById('usr-notif-count');
+    if (badgeColetas) badgeColetas.textContent = sched + prog;
+    if (notifCount) notifCount.textContent = sched + prog;
+
+    // Mini Stats Topo
+    var elTotal = document.getElementById('usr-stat-total');
+    var elProg = document.getElementById('usr-stat-prog');
+    var elDone = document.getElementById('usr-stat-concluidas');
+    var elCancel = document.getElementById('usr-stat-canceladas');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elProg) elProg.textContent = sched + prog;
+    if (elDone) elDone.textContent = done;
+    if (elCancel) elCancel.textContent = cancel;
+
+    // Badge Counters das Abas
+    var tabAll = document.getElementById('count-tab-all');
+    var tabSched = document.getElementById('count-tab-sched');
+    var tabProg = document.getElementById('count-tab-prog');
+    var tabDone = document.getElementById('count-tab-done');
+    var tabCancel = document.getElementById('count-tab-cancel');
+
+    if (tabAll) tabAll.textContent = total;
+    if (tabSched) tabSched.textContent = sched;
+    if (tabProg) tabProg.textContent = prog;
+    if (tabDone) tabDone.textContent = done;
+    if (tabCancel) tabCancel.textContent = cancel;
+  }
+
+  function toggleColetasView(viewType) {
+    currentColetasView = viewType || 'grid';
+
+    var btnCards = document.getElementById('btn-view-cards');
+    var btnTable = document.getElementById('btn-view-table');
+    var gridEl = document.getElementById('coletas-grid');
+    var tableSec = document.getElementById('coletas-table-section');
+
+    if (currentColetasView === 'grid') {
+      if (btnCards) btnCards.classList.add('active');
+      if (btnTable) btnTable.classList.remove('active');
+      if (gridEl) gridEl.style.display = 'flex';
+      if (tableSec) tableSec.style.display = 'none';
+    } else {
+      if (btnCards) btnCards.classList.remove('active');
+      if (btnTable) btnTable.classList.add('active');
+      if (gridEl) gridEl.style.display = 'none';
+      if (tableSec) tableSec.style.display = 'block';
+    }
+  }
+
+  function setColetasFilter(el, filterKey) {
+    activeColetasFilter = filterKey || 'all';
+
+    var tabs = document.querySelectorAll('#tab-coletas .tab-btn');
+    tabs.forEach(function (btn) { btn.classList.remove('active'); });
+    if (el) el.classList.add('active');
+
+    filterColetasRows();
+  }
+
+  function filterColetasRows() {
+    var searchInput = document.getElementById('search-coletas');
+    var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+    var filtered = cachedColetas.filter(function (c) {
+      var st = c.status || 'agendado';
+      var matchFilter = true;
+
+      if (activeColetasFilter === 'sched') {
+        matchFilter = (st === 'agendado' || st === 'pendente');
+      } else if (activeColetasFilter === 'prog') {
+        matchFilter = (st === 'em_andamento');
+      } else if (activeColetasFilter === 'done') {
+        matchFilter = (st === 'concluido');
+      } else if (activeColetasFilter === 'cancel') {
+        matchFilter = (st === 'cancelado');
+      }
+
+      if (!matchFilter) return false;
+
+      if (!query) return true;
+
+      var emp = (c.empresa_nome || '').toLowerCase();
+      var proto = (c.protocolo || '').toLowerCase();
+      var mat = (c.tipo_residuo || '').toLowerCase();
+      var end = (c.endereco_coleta || '').toLowerCase();
+
+      return emp.includes(query) || proto.includes(query) || mat.includes(query) || end.includes(query);
+    });
+
+    renderizarMinhasColetas(filtered);
+  }
+
+  function renderizarMinhasColetas(coletas) {
+    var grid = document.getElementById('coletas-grid');
+    var tbody = document.getElementById('coletas-tbody');
+    var emptyEl = document.getElementById('empty-state');
+
+    if (grid) grid.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
+
+    if (!coletas || coletas.length === 0) {
+      if (emptyEl) emptyEl.classList.add('show');
+      return;
+    } else if (emptyEl) {
+      emptyEl.classList.remove('show');
+    }
+
+    var statusMap = {
+      'pendente': { label: 'Pendente', badgeCls: 'badge-sched' },
+      'agendado': { label: 'Agendada', badgeCls: 'badge-sched' },
+      'em_andamento': { label: 'Em andamento', badgeCls: 'badge-prog' },
+      'concluido': { label: 'Concluída', badgeCls: 'badge-done' },
+      'cancelado': { label: 'Cancelada', badgeCls: 'badge-cancel' }
+    };
+
+    coletas.forEach(function (c) {
+      var companyName = c.empresa_nome || 'EcoColeta Santos';
+      var letter = companyName.charAt(0).toUpperCase();
+      var orderId = c.protocolo || ('COL-' + strPad(c.id, 6));
+      var rawDate = c.data_agendada || '';
+      var parts = rawDate.split('-');
+      var dayNum = parts.length === 3 ? parts[2] : '15';
+      var monthName = parts.length === 3 ? monthsNames[parseInt(parts[1], 10) - 1] + '/' + parts[0].substring(2) : 'AGO/26';
+      var dateFmt = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
+      var stInfo = statusMap[c.status] || statusMap['agendado'];
+      var weight = (parseFloat(c.peso_estimado_kg || 1)).toFixed(1);
+      var tiposText = c.tipo_residuo || 'Recicláveis';
+
+      var tags = tiposText.split(',').map(function (t) {
+        return '<span class="etag tag-plastic">' + t.trim() + '</span>';
+      }).join(' ');
+
+      // Ações dos Cards
+      var actionsCardHtml = '';
+      actionsCardHtml += '<button class="btn-card-action primary" onclick="event.stopPropagation();imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
+      if (c.status === 'concluido') {
+        actionsCardHtml += '<button class="btn-card-action" style="margin-left:4px;background:#fef3c7;color:#b45309;border-color:#fde68a;" onclick="event.stopPropagation();openEvalModal(' + c.id + ', \'' + companyName.replace(/'/g, "\\'") + '\')">⭐ Avaliar</button>';
+      } else if (c.status === 'pendente' || c.status === 'agendado') {
+        actionsCardHtml += '<button class="btn-card-action" style="margin-left:4px;color:#b53b3b;border-color:#f0ccc8;" onclick="event.stopPropagation();cancelarMinhaColeta(' + c.id + ')">✕</button>';
+      }
+
+      // 1. Renderiza no Grid de Cards
+      if (grid) {
+        var card = document.createElement('div');
+        card.className = 'coleta-card';
+        card.onclick = function () { openDetailModal(c.id); };
+
+        card.innerHTML =
+          '<div class="coleta-avatar av-green">' + letter + '</div>' +
+          '<div class="coleta-info">' +
+            '<div class="coleta-company">' + companyName + '</div>' +
+            '<div class="coleta-tags">' + tags + '</div>' +
+          '</div>' +
+          '<div class="coleta-date"><div class="date-day">' + dayNum + '</div><div class="date-month">' + monthName + '</div></div>' +
+          '<div class="coleta-weight"><div class="weight-val">' + weight + ' kg</div><div class="weight-lbl">Estimado</div></div>' +
+          '<div class="coleta-right">' +
+            '<span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span>' +
+            '<div style="display:flex;align-items:center;">' + actionsCardHtml + '</div>' +
+          '</div>';
+
+        grid.appendChild(card);
+      }
+
+      // 2. Renderiza na Tabela
+      if (tbody) {
+        var tr = document.createElement('tr');
+        var actionsTableHtml = '<div style="display:flex;gap:0.4rem;align-items:center;">';
+        actionsTableHtml += '<button class="btn-card-action" title="Ver detalhes" onclick="openDetailModal(' + c.id + ')">👁️ Detalhes</button>';
+        actionsTableHtml += '<button class="btn-card-action primary" title="Imprimir PDF" onclick="imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
+
+        if (c.status === 'concluido') {
+          actionsTableHtml += '<button class="btn-card-action" style="background:#fef3c7;color:#b45309;border-color:#fde68a;" onclick="openEvalModal(' + c.id + ', \'' + companyName.replace(/'/g, "\\'") + '\')">⭐ Avaliar</button>';
+        } else if (c.status === 'pendente' || c.status === 'agendado') {
+          actionsTableHtml += '<button class="btn-card-action" style="color:#b53b3b;border-color:#f0ccc8;" onclick="cancelarMinhaColeta(' + c.id + ')">✕</button>';
+        }
+        actionsTableHtml += '</div>';
+
+        tr.innerHTML =
+          '<td>' +
+            '<div class="table-comp-info">' +
+              '<div class="comp-letter text-green-bg">' + letter + '</div>' +
+              '<div><strong>' + companyName + '</strong><div style="font-size:0.75rem;color:var(--text-grey);">' + orderId + '</div></div>' +
+            '</div>' +
+          '</td>' +
+          '<td><span class="etag tag-plastic">' + tiposText + '</span></td>' +
+          '<td>' + dateFmt + '</td>' +
+          '<td><strong>' + weight + ' kg</strong></td>' +
+          '<td><span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span></td>' +
+          '<td>' + actionsTableHtml + '</td>';
+
+        tbody.appendChild(tr);
+      }
+    });
+  }
+
+  function strPad(n, width) {
+    n = n + '';
+    return n.length >= width ? n : new Array(width - n.length + 1).join('0') + n;
+  }
+
+  /* ==========================================================================
+     5. RENDERIZAÇÃO DAS EMPRESAS PARCEIRAS (ABA EMPRESAS)
+     ========================================================================== */
   function renderizarEmpresasDisponiveis(empresas) {
     var container = document.getElementById('dash-empresas-container');
     var tabContainer = document.getElementById('tab-empresas-list');
@@ -223,7 +494,7 @@
     if (container) container.innerHTML = '';
     if (tabContainer) tabContainer.innerHTML = '';
 
-    if (empresas.length === 0) {
+    if (!empresas || empresas.length === 0) {
       var emptyMsg = '<p style="color:var(--text-grey);font-size:0.88rem;">Nenhuma empresa cadastrada no momento.</p>';
       if (container) container.innerHTML = emptyMsg;
       if (tabContainer) tabContainer.innerHTML = emptyMsg;
@@ -244,7 +515,7 @@
           '<div class="db-ecard-avatar">' + letter + '</div>' +
           '<div class="db-ecard-meta">' +
             '<h3>' + name + '</h3>' +
-            '<p class="db-ecard-city">📍 ' + city + ' &bull; <strong style="color:var(--g700);">' + cat + '</strong></p>' +
+            '<p class="db-ecard-city">📍 ' + city + ' &bull; <strong style="color:var(--brand-green-hover);">' + cat + '</strong></p>' +
             '<div class="db-ecard-stars">★★★★★ <span class="rating-num">' + nota + '</span></div>' +
           '</div>' +
         '</div>' +
@@ -259,169 +530,53 @@
     });
   }
 
-  /* ==========================================================================
-     3. GERENCIAMENTO DAS COLETAS DO USUÁRIO (GRID & CARDS)
-     ========================================================================== */
-  function carregarColetasDoBanco() {
-    if (!window.apiFetch) return;
-    window.apiFetch('api/coletas/index.php').then(function (res) {
-      if (res && res.success && Array.isArray(res.coletas)) {
-        cachedColetas = res.coletas;
-        renderizarColetasDoBanco(res.coletas);
-        renderizarHistoricoAtividades(res.coletas);
-      }
+  function filterEmpresasList() {
+    var query = (document.getElementById('search-empresas') || {}).value || '';
+    query = query.toLowerCase().trim();
+
+    var list = cachedEmpresas.length > 0 ? cachedEmpresas : defaultSantosCompanies;
+    var filtered = list.filter(function (emp) {
+      var name = (emp.razao_social || '').toLowerCase();
+      var cat = (emp.categoria || '').toLowerCase();
+      var bairro = (emp.bairro || '').toLowerCase();
+      return name.includes(query) || cat.includes(query) || bairro.includes(query);
     });
-  }
 
-  function renderizarColetasDoBanco(coletas) {
-    var grid = document.getElementById('coletas-grid');
-    if (!grid) return;
+    var tabContainer = document.getElementById('tab-empresas-list');
+    if (!tabContainer) return;
+    tabContainer.innerHTML = '';
 
-    grid.innerHTML = '';
-
-    if (coletas.length === 0) {
-      var emptyEl = document.getElementById('empty-state');
-      if (emptyEl) emptyEl.classList.add('show');
+    if (filtered.length === 0) {
+      tabContainer.innerHTML = '<p style="color:var(--text-grey);font-size:0.88rem;padding:1.5rem;text-align:center;">Nenhuma empresa encontrada para a busca "' + query + '".</p>';
       return;
-    } else {
-      var emptyEl2 = document.getElementById('empty-state');
-      if (emptyEl2) emptyEl2.classList.remove('show');
     }
 
-    var statusMap = {
-      'pendente': { key: 'sched', label: 'Pendente', badgeCls: 'badge-sched' },
-      'agendado': { key: 'sched', label: 'Agendada', badgeCls: 'badge-sched' },
-      'concluido': { key: 'done', label: 'Concluída', badgeCls: 'badge-done' },
-      'cancelado': { key: 'cancel', label: 'Cancelada', badgeCls: 'badge-cancel' }
-    };
-
-    var months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-
-    coletas.forEach(function (c) {
-      var companyName = c.empresa_nome || 'EcoColeta Santos';
-      var orderId = c.protocolo || ('COL-' + strPad(c.id, 6));
-      var stInfo = statusMap[c.status] || statusMap['agendado'];
-
-      var rawDate = c.data_agendada || '';
-      var parts = rawDate.split('-');
-      var dayNum = parts.length === 3 ? parts[2] : '15';
-      var monthName = parts.length === 3 ? months[parseInt(parts[1], 10) - 1] + '/' + parts[0].substring(2) : 'Jun/26';
-      var formattedDateStr = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
-
-      var weight = parseFloat(c.peso_estimado_kg || 1.0).toFixed(1);
-      var tiposText = c.tipo_residuo || 'Plástico, Papel';
+    filtered.forEach(function (emp) {
+      var name = emp.razao_social || 'Empresa Reciclagem';
+      var city = (emp.bairro ? emp.bairro + ', ' : '') + (emp.cidade || 'Santos') + ' - ' + (emp.uf || 'SP');
+      var cat = emp.categoria || 'Reciclagem Geral';
+      var letter = name.charAt(0).toUpperCase();
+      var nota = parseFloat(emp.nota_media || 5.0).toFixed(1);
 
       var card = document.createElement('div');
-      card.className = 'coleta-card';
-      card.dataset.status = stInfo.key;
-      card.dataset.date = rawDate;
-      card.dataset.weight = weight;
-      card.dataset.company = companyName;
-
-      var tags = tiposText.split(',').map(function (t) {
-        return '<span class="etag tag-plastic">' + t.trim() + '</span>';
-      }).join(' ');
-
-      var actionsHtml = '';
-      if (c.status === 'concluido') {
-        actionsHtml =
-          '<button class="btn-card-action primary" onclick="event.stopPropagation();imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>' +
-          '<button class="btn-card-action secondary" style="margin-left:4px;background:#fef3c7;color:#b45309;border:1px solid #fde68a;" onclick="event.stopPropagation();openEvalModal(' + c.id + ', \'' + companyName.replace(/'/g, "\\'") + '\')">⭐ Avaliar</button>';
-      } else {
-        actionsHtml = '<button class="btn-card-action primary" onclick="event.stopPropagation();imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
-      }
-
+      card.className = 'dashboard-ecard';
       card.innerHTML =
-        '<div class="coleta-avatar av-green">' + companyName.charAt(0).toUpperCase() + '</div>' +
-        '<div class="coleta-info">' +
-          '<div class="coleta-company">' + companyName + '</div>' +
-          '<div class="coleta-tags">' + tags + '</div>' +
+        '<div class="db-ecard-left">' +
+          '<div class="db-ecard-avatar">' + letter + '</div>' +
+          '<div class="db-ecard-meta">' +
+            '<h3>' + name + '</h3>' +
+            '<p class="db-ecard-city">📍 ' + city + ' &bull; <strong style="color:var(--brand-green-hover);">' + cat + '</strong></p>' +
+            '<div class="db-ecard-stars">★★★★★ <span class="rating-num">' + nota + '</span></div>' +
+          '</div>' +
         '</div>' +
-        '<div class="coleta-date"><div class="date-day">' + dayNum + '</div><div class="date-month">' + monthName + '</div></div>' +
-        '<div class="coleta-weight"><div class="weight-val">' + weight + ' kg</div><div class="weight-lbl">Estimado</div></div>' +
-        '<div class="coleta-right">' +
-          '<span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span>' +
-          '<div style="display:flex;align-items:center;">' + actionsHtml + '</div>' +
-        '</div>';
+        '<button class="btn-c-dash" onclick="selecionarEmpresaNoModal(\'' + name.replace(/'/g, "\\'") + '\')">Chamar Coleta</button>';
 
-      card.onclick = function () {
-        openDetail(companyName, c.endereco_coleta || 'Santos, SP', companyName.charAt(0).toUpperCase(), 'av-green', stInfo.key, dayNum, monthName, weight, tiposText, formattedDateStr, orderId, c.id, c.status);
-      };
-
-      grid.appendChild(card);
+      tabContainer.appendChild(card);
     });
-
-    applyFilters();
-  }
-
-  function strPad(n, width) {
-    n = n + '';
-    return n.length >= width ? n : new Array(width - n.length + 1).join('0') + n;
   }
 
   /* ==========================================================================
-     4. FILTROS E ORDENAÇÃO DE CARDS
-     ========================================================================== */
-  function filterCards(keyword) {
-    var cards = document.querySelectorAll('.coleta-card');
-    var visibleCount = 0;
-    keyword = (keyword || '').toLowerCase();
-
-    cards.forEach(function (card) {
-      var comp = card.dataset.company.toLowerCase();
-      var status = card.dataset.status;
-      var textMatch = comp.indexOf(keyword) !== -1;
-      var statusMatch = currentFilter === 'all' || status === currentFilter;
-
-      if (textMatch && statusMatch) {
-        card.style.display = 'flex';
-        visibleCount++;
-      } else {
-        card.style.display = 'none';
-      }
-    });
-
-    var emptyEl = document.getElementById('empty-state');
-    if (emptyEl) {
-      if (visibleCount === 0) emptyEl.classList.add('show');
-      else emptyEl.classList.remove('show');
-    }
-  }
-
-  function setFilter(filterKey, element) {
-    currentFilter = filterKey;
-    var pills = document.querySelectorAll('.filter-pill');
-    pills.forEach(function (p) { p.classList.remove('active'); });
-    if (element) element.classList.add('active');
-
-    var searchInput = document.getElementById('search-input');
-    filterCards(searchInput ? searchInput.value : '');
-  }
-
-  function applyFilters() {
-    var searchInput = document.getElementById('search-input');
-    filterCards(searchInput ? searchInput.value : '');
-  }
-
-  function sortCards(sortKey) {
-    currentSort = sortKey;
-    var grid = document.getElementById('coletas-grid');
-    if (!grid) return;
-    var cards = Array.from(grid.children);
-
-    cards.sort(function (a, b) {
-      if (sortKey === 'date-desc') return new Date(b.dataset.date) - new Date(a.dataset.date);
-      if (sortKey === 'date-asc') return new Date(a.dataset.date) - new Date(b.dataset.date);
-      if (sortKey === 'weight-desc') return parseFloat(b.dataset.weight) - parseFloat(a.dataset.weight);
-      if (sortKey === 'weight-asc') return parseFloat(a.dataset.weight) - parseFloat(b.dataset.weight);
-      return 0;
-    });
-
-    cards.forEach(function (card) { grid.appendChild(card); });
-  }
-
-  /* ==========================================================================
-     5. PAINEL LATERAL DE DETALHES DA COLETA
+     6. PAINEL LATERAL DE DETALHES DA COLETA (DRAWER SLIDE PANEL)
      ========================================================================== */
   var badges = {
     done:   '<span class="badge badge-done">Concluída</span>',
@@ -430,19 +585,33 @@
     cancel: '<span class="badge badge-cancel">Cancelada</span>'
   };
 
-  function openDetail(company, loc, letter, avClass, status, day, month, weight, tipos, date, id, rawId, rawStatus) {
-    document.getElementById('dp-title').textContent   = 'Coleta #' + id;
+  function openDetailModal(coletaId) {
+    var coleta = cachedColetas.find(function (c) { return c.id === coletaId; });
+    if (!coleta) return;
+
+    var company = coleta.empresa_nome || 'EcoColeta Santos';
+    var loc = coleta.endereco_coleta || 'Santos, SP';
+    var letter = company.charAt(0).toUpperCase();
+    var status = coleta.status === 'concluido' ? 'done' : (coleta.status === 'cancelado' ? 'cancel' : (coleta.status === 'em_andamento' ? 'prog' : 'sched'));
+    var weight = (parseFloat(coleta.peso_estimado_kg || 1)).toFixed(1);
+    var tipos = coleta.tipo_residuo || 'Materiais Recicláveis';
+    var orderId = coleta.protocolo || ('COL-' + strPad(coleta.id, 6));
+    var rawDate = coleta.data_agendada || '';
+    var parts = rawDate.split('-');
+    var formattedDate = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
+
+    document.getElementById('dp-title').textContent   = 'Coleta #' + orderId;
     document.getElementById('dp-company').textContent = company;
     document.getElementById('dp-loc').textContent     = '📍 ' + loc;
-    document.getElementById('dp-id').textContent      = id;
-    document.getElementById('dp-date').textContent    = date;
+    document.getElementById('dp-id').textContent      = orderId;
+    document.getElementById('dp-date').textContent    = formattedDate;
     document.getElementById('dp-tipos').textContent   = tipos;
     document.getElementById('dp-weight').textContent  = weight + ' kg';
 
     var av = document.getElementById('dp-avatar');
     if (av) {
       av.textContent = letter;
-      av.className   = 'coleta-avatar ' + avClass;
+      av.className   = 'coleta-avatar av-green';
     }
 
     var b = document.getElementById('dp-badge');
@@ -450,11 +619,11 @@
 
     var actContainer = document.getElementById('dp-actions');
     if (actContainer) {
-      var html = '<button class="btn-detail-primary" onclick="imprimirComprovantePDF(\'' + id + '\')">📄 Imprimir PDF Oficial</button>';
-      if (rawStatus === 'concluido') {
-        html += '<button class="btn-detail-secondary" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;" onclick="openEvalModal(' + rawId + ', \'' + company.replace(/'/g, "\\'") + '\')">⭐ Avaliar Atendimento (+10 pts)</button>';
-      } else if (rawStatus === 'pendente' || rawStatus === 'agendado') {
-        html += '<button class="btn-detail-secondary" onclick="cancelarMinhaColeta(' + rawId + ')">✕ Cancelar Solicitação</button>';
+      var html = '<button class="btn-detail-primary" onclick="imprimirComprovantePDF(\'' + orderId + '\')">📄 Imprimir PDF Oficial</button>';
+      if (coleta.status === 'concluido') {
+        html += '<button class="btn-detail-secondary" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;" onclick="openEvalModal(' + coleta.id + ', \'' + company.replace(/'/g, "\\'") + '\')">⭐ Avaliar Atendimento (+10 pts)</button>';
+      } else if (coleta.status === 'pendente' || coleta.status === 'agendado') {
+        html += '<button class="btn-detail-secondary" onclick="cancelarMinhaColeta(' + coleta.id + ')">✕ Cancelar Solicitação</button>';
       }
       actContainer.innerHTML = html;
     }
@@ -481,7 +650,7 @@
       body: { coleta_id: coletaId, status: 'cancelado' }
     }).then(function (res) {
       if (res && res.success) {
-        window.toast('✓ ' + (res.message || 'Coleta cancelada.'));
+        window.toast('✓ ' + (res.message || 'Coleta cancelada com sucesso.'));
         closeDetail();
         carregarPainelUsuario();
       } else {
@@ -491,7 +660,7 @@
   }
 
   /* ==========================================================================
-     6. MAPA INTERATIVO LEAFLET.JS (ABA VER NO MAPA)
+     7. MAPA INTERATIVO LEAFLET.JS (ABA VER NO MAPA)
      ========================================================================== */
   function initLeafletMap(empresas) {
     var mapDiv = document.getElementById('map-canvas');
@@ -508,7 +677,6 @@
       mapInstance.invalidateSize();
     }
 
-    // Adiciona marcadores de empresas
     (empresas || []).forEach(function (emp) {
       var lat = emp.lat || -23.9618 + (Math.random() - 0.5) * 0.04;
       var lng = emp.lng || -46.3322 + (Math.random() - 0.5) * 0.04;
@@ -517,10 +685,10 @@
 
       var popupHtml =
         '<div style="font-family:sans-serif;font-size:13px;line-height:1.4;">' +
-          '<strong style="color:#2f855a;font-size:14px;">🌱 ' + name + '</strong><br>' +
+          '<strong style="color:#1d8045;font-size:14px;">🌱 ' + name + '</strong><br>' +
           '<span style="color:#4a5568;">' + cat + '</span><br>' +
           '<span style="color:#f59e0b;font-weight:bold;">★ ' + (emp.nota_media || 5.0) + '</span><br>' +
-          '<button style="margin-top:6px;padding:4px 10px;background:#2f855a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;" onclick="selecionarEmpresaNoModal(\'' + name.replace(/'/g, "\\'") + '\')">Solicitar Coleta Aqui ♻️</button>' +
+          '<button style="margin-top:6px;padding:5px 12px;background:#0d2415;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;" onclick="selecionarEmpresaNoModal(\'' + name.replace(/'/g, "\\'") + '\')">Solicitar Coleta Aqui ♻️</button>' +
         '</div>';
 
       window.L.marker([lat, lng])
@@ -530,7 +698,6 @@
   }
 
   function selecionarEmpresaNoModal(empresaNome) {
-    switchUserTab('coletas');
     openRequestModal();
     var select = document.getElementById('req-empresa');
     if (select) {
@@ -545,7 +712,7 @@
   }
 
   /* ==========================================================================
-     7. HISTÓRICO DE ATIVIDADES E PONTUAÇÃO (ABA HISTÓRICO)
+     8. HISTÓRICO DE ATIVIDADES E PONTUAÇÃO (ABA HISTÓRICO)
      ========================================================================== */
   function renderizarHistoricoAtividades(coletas) {
     var list = document.getElementById('tab-historico-list');
@@ -559,21 +726,22 @@
 
     coletas.forEach(function (c) {
       var item = document.createElement('div');
-      item.style.cssText = 'padding:1rem 1.2rem;border:1px solid var(--gray-200);border-radius:12px;display:flex;justify-content:space-between;align-items:center;background:#fff;';
+      item.style.cssText = 'padding:1rem 1.2rem;border:1px solid var(--border-light);border-radius:12px;display:flex;justify-content:space-between;align-items:center;background:#fff;';
 
       var isConcluida = c.status === 'concluido';
-      var icon = isConcluida ? '🌱' : (c.status === 'agendado' ? '📅' : '⏳');
+      var icon = isConcluida ? '🌱' : (c.status === 'agendado' ? '📅' : (c.status === 'cancelado' ? '✕' : '⏳'));
       var pts = isConcluida ? '+20 pts' : '+0 pts';
-      var ptsColor = isConcluida ? 'var(--g400)' : 'var(--text-grey)';
+      var ptsColor = isConcluida ? 'var(--brand-green-hover)' : 'var(--text-grey)';
 
       var rawDate = c.data_agendada || '';
       var parts = rawDate.split('-');
       var dateFmt = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
+      var orderId = c.protocolo || ('COL-' + strPad(c.id, 6));
 
       item.innerHTML =
         '<div>' +
-          '<strong style="color:var(--g700);font-size:0.95rem;">' + icon + ' Coleta ' + (c.status.toUpperCase()) + ' — ' + (c.tipo_residuo || 'Geral') + '</strong>' +
-          '<div style="font-size:0.8rem;color:var(--gray-600);margin-top:2px;">' + (c.empresa_nome || 'EcoColeta') + ' • ' + (c.peso_estimado_kg || 1) + ' kg • ' + dateFmt + '</div>' +
+          '<strong style="color:var(--text-dark);font-size:0.95rem;">' + icon + ' Coleta ' + (c.status ? c.status.toUpperCase() : 'AGENDADA') + ' — ' + (c.tipo_residuo || 'Recicláveis') + '</strong>' +
+          '<div style="font-size:0.8rem;color:var(--text-grey);margin-top:2px;">' + (c.empresa_nome || 'EcoColeta') + ' • ' + (c.peso_estimado_kg || 1) + ' kg • ' + dateFmt + ' • Protocolo ' + orderId + '</div>' +
         '</div>' +
         '<span style="color:' + ptsColor + ';font-weight:700;font-size:0.95rem;">' + pts + '</span>';
 
@@ -582,7 +750,7 @@
   }
 
   /* ==========================================================================
-     8. MODAL DE AVALIAÇÃO DE COLETAS CONCLUÍDAS (FASE 3)
+     9. MODAL DE AVALIAÇÃO DE COLETAS CONCLUÍDAS
      ========================================================================== */
   function openEvalModal(coletaId, empresaNome) {
     var overlay = document.getElementById('eval-overlay');
@@ -671,7 +839,7 @@
   }
 
   /* ==========================================================================
-     9. MODAL DE SOLICITAÇÃO DE COLETA & MATERIAIS ACEITOS
+     10. MODAL DE SOLICITAÇÃO DE COLETA & MATERIAIS ACEITOS
      ========================================================================== */
   function getAcceptedMaterialsForCategory(cat) {
     cat = (cat || '').toLowerCase();
@@ -698,14 +866,14 @@
     todosMateriais.forEach(function (mat) {
       var isAccepted = acceptedList.indexOf(mat.name) !== -1;
       var chip = document.createElement('div');
-      chip.className = 'mat-chip' + (isAccepted ? ' accepted active' : ' disabled');
+      chip.className = 'mat-chip' + (isAccepted ? ' active' : ' disabled');
       chip.dataset.material = mat.name;
       chip.dataset.accepted = isAccepted ? 'true' : 'false';
 
       chip.innerHTML =
-        '<span class="mat-chip-icon">' + mat.icon + '</span>' +
-        '<span class="mat-chip-name">' + mat.name + '</span>' +
-        '<span class="mat-chip-status">' + (isAccepted ? '✓' : '✕') + '</span>';
+        '<span style="font-size:0.95rem;">' + mat.icon + '</span>' +
+        '<span>' + mat.name + '</span>' +
+        '<span style="font-size:0.75rem;">' + (isAccepted ? '✓' : '✕') + '</span>';
 
       if (isAccepted) {
         chip.addEventListener('click', function () {
@@ -763,19 +931,9 @@
     if (!empSelect) return;
 
     if (empSelect.options.length === 0) {
-      popularSelectComEmpresas(defaultSantosCompanies);
+      popularSelectComEmpresas(cachedEmpresas.length > 0 ? cachedEmpresas : defaultSantosCompanies);
     } else {
       onCompanySelectChange(empSelect.value);
-    }
-
-    if (window.apiFetch) {
-      window.apiFetch('api/empresas/index.php').then(function (res) {
-        if (res && res.success && Array.isArray(res.empresas) && res.empresas.length > 0) {
-          popularSelectComEmpresas(res.empresas);
-        }
-      }).catch(function() {
-        popularSelectComEmpresas(defaultSantosCompanies);
-      });
     }
   }
 
@@ -789,22 +947,10 @@
     var cep = (addr.cep || '').replace(/\D/g, '');
     var endereco = (addr.endereco || '').toLowerCase();
 
-    // Se o CEP for de Santos (faixa 11000 a 11099)
-    if (cep.length === 8 && cep.startsWith('110')) {
-      return true;
-    }
-    // Se a cidade for explicitamente Santos
-    if (cidade === 'santos') {
-      return uf === 'sp' || uf === '';
-    }
-    // Se a string de endereço contiver Santos
-    if (endereco.includes('santos') && (uf === 'sp' || uf === '')) {
-      return true;
-    }
-    // Se não tiver cidade preenchida mas tiver logradouro/bairro padrão
-    if (!cidade && (addr.logradouro || addr.bairro) && (uf === 'sp' || !uf)) {
-      return true;
-    }
+    if (cep.length === 8 && cep.startsWith('110')) return true;
+    if (cidade === 'santos' && (uf === 'SP' || uf === '')) return true;
+    if (endereco.includes('santos') && (uf === 'SP' || uf === '')) return true;
+    if (!cidade && (addr.logradouro || addr.bairro) && (uf === 'SP' || !uf)) return true;
     return false;
   }
 
@@ -843,7 +989,7 @@
 
   function formatarEnderecoLegivel(addr) {
     if (!addr || (!addr.logradouro && !addr.cep && !addr.bairro)) {
-      return 'Nenhum endereço cadastrado no seu perfil ainda. Clique em "Outros" para preencher um endereço em Santos.';
+      return 'Nenhum endereço residencial cadastrado. Preencha no modo "Outros".';
     }
     var tipo = addr.tipo_logradouro ? addr.tipo_logradouro + ' ' : '';
     var log = addr.logradouro ? (addr.logradouro.toLowerCase().startsWith(tipo.trim().toLowerCase()) ? addr.logradouro : tipo + addr.logradouro) : 'Endereço sem logradouro';
@@ -874,7 +1020,6 @@
       previewText.textContent = formatarEnderecoLegivel(userRegisteredAddress);
     }
 
-    // Se o endereço residencial for fora de Santos, exibe alerta explicativo
     if (!ehDeSantos && temEnderecoCadastrado) {
       if (alertForaSantos) alertForaSantos.style.display = 'flex';
       if (cidadeOrigemSpan) {
@@ -894,7 +1039,6 @@
       }
     }
 
-    // Se não for de Santos ou estiver no modo customizado, força formulário Outros
     if (isCustomAddressMode || !temEnderecoCadastrado || !ehDeSantos) {
       if (tabResidencial) tabResidencial.classList.remove('active');
       if (tabOutros) tabOutros.classList.add('active');
@@ -923,37 +1067,28 @@
 
     if (tipo === 'residencial') {
       if (!userRegisteredAddress || (!userRegisteredAddress.logradouro && !userRegisteredAddress.cep)) {
-        window.toast('⚠ Você ainda não possui endereço residencial no perfil. Preencha os campos abaixo.');
+        window.toast('⚠ Você ainda não possui endereço residencial cadastrado. Preencha abaixo.');
         selecionarTipoEndereco('outros');
         return;
       }
       if (!ehDeSantos) {
         var cidNome = userRegisteredAddress.cidade || 'outra cidade';
         var ufNome = userRegisteredAddress.uf ? '/' + userRegisteredAddress.uf : '';
-        window.toast('❌ O EcoCall opera exclusivamente no município de Santos/SP. Como seu endereço cadastrado é em ' + cidNome + ufNome + ', informe obrigatoriamente um endereço em Santos no modo "Outros".');
+        window.toast('❌ O EcoCall opera em Santos/SP. Como seu endereço cadastrado é em ' + cidNome + ufNome + ', informe um endereço em Santos no modo "Outros".');
         selecionarTipoEndereco('outros');
         return;
       }
       isCustomAddressMode = false;
       preencherInputsEndereco(userRegisteredAddress);
       atualizarVisualizacaoEnderecoModal();
-      window.toast('🏠 Endereço residencial de Santos selecionado como padrão.');
+      window.toast('🏠 Endereço residencial de Santos selecionado.');
     } else {
-      // outros
       isCustomAddressMode = true;
       atualizarVisualizacaoEnderecoModal();
       var cepInput = document.getElementById('req-cep');
       if (cepInput) cepInput.focus();
-      window.toast('📍 Modo "Outros" selecionado. Digite o endereço ou consulte pelo CEP de Santos.');
+      window.toast('📍 Modo "Outros" selecionado. Informe o endereço em Santos.');
     }
-  }
-
-  function alternarParaEnderecoPersonalizado() {
-    selecionarTipoEndereco('outros');
-  }
-
-  function restaurarEnderecoPadrao() {
-    selecionarTipoEndereco('residencial');
   }
 
   function openRequestModal() {
@@ -994,7 +1129,6 @@
 
     aplicarDadosEnderecoModal();
 
-    // Sincroniza em segundo plano com a API para garantir dados mais recentes e atualiza o modal
     if (window.apiFetch) {
       window.apiFetch('api/auth/me.php').then(function (res) {
         if (res && res.authenticated && res.user) {
@@ -1013,7 +1147,7 @@
   }
 
   /* ==========================================================================
-     10. INTEGRAÇÃO VIACEP E VALIDAÇÃO EXCLUSIVA SANTOS/SP
+     11. BUSCA DE CEP VIA VIACEP COM VALIDAÇÃO SANTOS/SP
      ========================================================================== */
   function maskReqCEP(input) {
     var v = input.value.replace(/\D/g, '');
@@ -1027,14 +1161,10 @@
     if (!cepInput) return;
     var cep = cepInput.value.replace(/\D/g, '');
 
-    if (cep.length !== 8) {
-      window.toast('⚠ Digite um CEP válido com 8 dígitos.');
-      return;
-    }
+    if (cep.length !== 8) return;
 
-    // Validação Estrita: Todos os CEPs de Santos/SP começam exclusivamente com "110" (faixa 11000-000 a 11099-999)
     if (!cep.startsWith('110')) {
-      window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP deve começar com "110" (faixa 11000 a 11099). Não atendemos fora de Santos.');
+      window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP deve começar com "110" (faixa 11000 a 11099).');
       setVal('req-cep', '');
       setVal('req-logradouro', '');
       setVal('req-bairro', '');
@@ -1058,12 +1188,8 @@
         var uf = (data.uf || '').trim().toUpperCase();
 
         if (localidade !== 'santos' || uf !== 'SP') {
-          window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP ' + cep + ' pertence a ' + data.localidade + '/' + data.uf + '. Por favor, informe um CEP de Santos (iniciado por 110).');
+          window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP informado pertence a ' + data.localidade + '/' + data.uf + '.');
           setVal('req-cep', '');
-          setVal('req-logradouro', '');
-          setVal('req-bairro', '');
-          setVal('req-numero', '');
-          setVal('req-complemento', '');
           if (cepInput) cepInput.focus();
           return;
         }
@@ -1076,20 +1202,40 @@
         var numInput = document.getElementById('req-numero');
         if (numInput) numInput.focus();
 
-        window.toast('✅ Endereço em Santos/SP identificado com sucesso!');
+        window.toast('✅ Endereço em Santos/SP identificado!');
       })
       .catch(function () {
-        window.toast('⚠ Falha ao consultar o CEP. Preencha manualmente.');
+        window.toast('⚠ Falha ao consultar o CEP.');
       });
   }
 
-  function carregarCidadesReq(cidadePadrao) {
-    setVal('req-uf', 'SP');
-    setVal('req-cidade', 'Santos');
+  function buscarCEPPerfil() {
+    var cepInput = document.getElementById('usr-input-cep');
+    if (!cepInput) return;
+    var cep = cepInput.value.replace(/\D/g, '');
+
+    if (cep.length !== 8) return;
+
+    window.toast('🔍 Buscando endereço pelo CEP...');
+
+    fetch('https://viacep.com.br/ws/' + cep + '/json/')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && !data.erro) {
+          setVal('usr-input-logradouro', data.logradouro);
+          setVal('usr-input-bairro', data.bairro);
+          setVal('usr-input-cidade', data.localidade);
+          setVal('usr-input-uf', data.uf);
+          window.toast('✅ Endereço preenchido automaticamente!');
+          var num = document.getElementById('usr-input-numero');
+          if (num) num.focus();
+        }
+      })
+      .catch(function() {});
   }
 
   /* ==========================================================================
-     11. ENVIO DE NOVA SOLICITAÇÃO (POST PARA BANCO MYSQL)
+     12. ENVIO DE NOVA SOLICITAÇÃO (POST MYSQL)
      ========================================================================== */
   function submitCollectionRequest() {
     var companySelect = document.getElementById('req-empresa');
@@ -1106,7 +1252,7 @@
     });
 
     if (selectedMaterials.length === 0) {
-      window.toast('⚠ Selecione pelo menos 1 tipo de material aceito pela empresa.');
+      window.toast('⚠ Selecione pelo menos 1 tipo de material para a coleta.');
       return;
     }
 
@@ -1122,11 +1268,9 @@
     var numero = (document.getElementById('req-numero') || {}).value || '';
     var complemento = (document.getElementById('req-complemento') || {}).value || '';
     var bairro = (document.getElementById('req-bairro') || {}).value || '';
-    var uf = (document.getElementById('req-uf') || {}).value || 'SP';
-    var cidade = (document.getElementById('req-cidade') || {}).value || 'Santos';
 
     if (!isCustomAddressMode && !ehEnderecoDeSantos(userRegisteredAddress)) {
-      window.toast('❌ Seu endereço residencial cadastrado não pertence ao município de Santos/SP. Alterne para o modo "Outros" para agendar em Santos.');
+      window.toast('❌ Seu endereço residencial não é de Santos/SP. Use o modo "Outros".');
       selecionarTipoEndereco('outros');
       return;
     }
@@ -1134,7 +1278,7 @@
     if (isCustomAddressMode) {
       var cleanCep = cep.replace(/\D/g, '');
       if (!cleanCep || cleanCep.length !== 8 || !cleanCep.startsWith('110')) {
-        window.toast('❌ Atendimento exclusivo em Santos/SP! O CEP informado no modo "Outros" deve ser de Santos e começar com "110" (ex: 11000 a 11099).');
+        window.toast('❌ O CEP informado no modo "Outros" deve ser de Santos (faixa 11000 a 11099).');
         var cepInput = document.getElementById('req-cep');
         if (cepInput) cepInput.focus();
         return;
@@ -1142,12 +1286,7 @@
     }
 
     if (!logradouro || !numero || !bairro) {
-      if (!isCustomAddressMode) {
-        window.toast('⚠ Seu endereço cadastrado está incompleto. Alterne para "Outros" para preencher.');
-        selecionarTipoEndereco('outros');
-      } else {
-        window.toast('⚠ Preencha os campos obrigatórios do endereço de retirada em Santos (Logradouro, Número e Bairro).');
-      }
+      window.toast('⚠ Preencha os campos obrigatórios do endereço de retirada em Santos.');
       return;
     }
 
@@ -1211,7 +1350,7 @@
   }
 
   /* ==========================================================================
-     12. GERENCIAMENTO DE PERFIL DO USUÁRIO CIDADÃO
+     13. GERENCIAMENTO DE PERFIL DO USUÁRIO
      ========================================================================== */
   function setVal(id, val) {
     var el = document.getElementById(id);
@@ -1241,11 +1380,19 @@
       var statPontos = document.getElementById('usr-stat-pontos');
       var statMembro = document.getElementById('usr-stat-membro');
 
-      if (cardAvatar) cardAvatar.textContent = initials;
+      if (cardAvatar) {
+        if (u.avatar_url) {
+          cardAvatar.innerHTML = '<img src="' + u.avatar_url + '?v=' + Date.now() + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">';
+        } else {
+          cardAvatar.textContent = initials;
+        }
+      }
       if (cardName) cardName.textContent = name;
       if (cardEmail) cardEmail.textContent = email;
       if (statPontos) statPontos.textContent = (u.pontos || 0) + ' pts';
       if (statMembro) statMembro.textContent = memberSince;
+
+      atualizarBotaoRemoverAvatar(u.avatar_url);
 
       setVal('usr-input-nome', u.nome);
       setVal('usr-input-cpf', u.cpf);
@@ -1262,8 +1409,88 @@
       setVal('usr-input-senha', '');
       setVal('usr-input-senha-conf', '');
     }).catch(function (err) {
-      console.warn('Erro ao carregar dados do perfil do usuário:', err);
+      console.warn('Erro ao carregar perfil:', err);
     });
+  }
+
+  function uploadAvatarUsuario(input) {
+    if (!input || !input.files || input.files.length === 0) return;
+    var file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      window.toast('❌ A imagem selecionada ultrapassa o limite de 5MB.');
+      input.value = '';
+      return;
+    }
+
+    var formData = new FormData();
+    formData.append('avatar', file);
+
+    window.toast('⏳ Enviando foto de perfil...');
+
+    fetch('api/auth/upload_avatar.php', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      input.value = '';
+      if (data && data.success) {
+        window.toast('✓ ' + (data.message || 'Foto de perfil atualizada!'));
+        try {
+          var u = JSON.parse(sessionStorage.getItem('ecocall_user') || '{}');
+          u.avatar_url = data.avatar_url;
+          sessionStorage.setItem('ecocall_user', JSON.stringify(u));
+        } catch(e) {}
+
+        if (window.syncUserProfile) {
+          window.syncUserProfile();
+        }
+        carregarPerfilUsuario();
+      } else {
+        window.toast('⚠ ' + (data.error || 'Falha ao atualizar foto.'));
+      }
+    })
+    .catch(function (err) {
+      input.value = '';
+      console.error('Erro no upload de avatar:', err);
+      window.toast('⚠ Falha na comunicação com o servidor.');
+    });
+  }
+
+  function removerAvatarUsuario() {
+    if (!confirm('Deseja remover sua foto de perfil e voltar às iniciais?')) return;
+    window.toast('⏳ Removendo foto de perfil...');
+
+    fetch('api/auth/upload_avatar.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remover' })
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data && data.success) {
+        window.toast('✓ Foto de perfil removida.');
+        try {
+          var u = JSON.parse(sessionStorage.getItem('ecocall_user') || '{}');
+          u.avatar_url = null;
+          sessionStorage.setItem('ecocall_user', JSON.stringify(u));
+        } catch(e) {}
+
+        if (window.syncUserProfile) {
+          window.syncUserProfile();
+        }
+        carregarPerfilUsuario();
+      } else {
+        window.toast('⚠ ' + (data.error || 'Falha ao remover foto.'));
+      }
+    });
+  }
+
+  function atualizarBotaoRemoverAvatar(avatarUrl) {
+    var btn = document.getElementById('btn-remover-avatar');
+    if (btn) {
+      btn.style.display = avatarUrl ? 'inline-block' : 'none';
+    }
   }
 
   function salvarPerfilUsuario(e) {
@@ -1329,8 +1556,40 @@
     });
   }
 
+  function excluirMinhaContaUsuario() {
+    var confirm1 = confirm('⚠️ ATENÇÃO: Esta ação é definitiva e não poderá ser desfeita.\n\nTem certeza absoluta de que deseja excluir permanentemente seu cadastro, histórico de coletas e saldo de pontos da plataforma EcoCall?');
+    if (!confirm1) return;
+
+    var confirm2 = prompt('Digite "EXCLUIR" em letras maiúsculas para confirmar a exclusão definitiva:');
+    if (confirm2 !== 'EXCLUIR') {
+      window.toast('ℹ️ Operação de exclusão cancelada.');
+      return;
+    }
+
+    window.toast('⏳ Excluindo seu cadastro...');
+
+    if (window.apiFetch) {
+      window.apiFetch('api/auth/delete_account.php', {
+        method: 'POST'
+      }).then(function (res) {
+        if (res && res.success) {
+          try { sessionStorage.removeItem('ecocall_user'); } catch (e) {}
+          window.toast('✓ ' + (res.message || 'Cadastro excluído com sucesso. Redirecionando...'));
+          setTimeout(function () {
+            window.location.replace('ecocall-home.html');
+          }, 1200);
+        } else {
+          window.toast('❌ ' + (res.error || 'Não foi possível excluir o cadastro.'));
+        }
+      }).catch(function (err) {
+        console.error('Erro ao excluir conta:', err);
+        window.toast('❌ Falha na comunicação com o servidor.');
+      });
+    }
+  }
+
   /* ==========================================================================
-     13. INICIALIZAÇÃO DO SCRIPT
+     14. INICIALIZAÇÃO DO SCRIPT
      ========================================================================== */
   document.addEventListener('DOMContentLoaded', function () {
     carregarPainelUsuario();
@@ -1341,11 +1600,14 @@
   window.carregarColetasDoBanco = carregarColetasDoBanco;
   window.carregarPerfilUsuario = carregarPerfilUsuario;
   window.salvarPerfilUsuario = salvarPerfilUsuario;
-  window.setFilter = setFilter;
-  window.filterCards = filterCards;
-  window.applyFilters = applyFilters;
-  window.sortCards = sortCards;
-  window.openDetail = openDetail;
+  window.uploadAvatarUsuario = uploadAvatarUsuario;
+  window.removerAvatarUsuario = removerAvatarUsuario;
+  window.excluirMinhaContaUsuario = excluirMinhaContaUsuario;
+  window.setColetasFilter = setColetasFilter;
+  window.filterColetasRows = filterColetasRows;
+  window.filterEmpresasList = filterEmpresasList;
+  window.toggleColetasView = toggleColetasView;
+  window.openDetailModal = openDetailModal;
   window.closeDetail = closeDetail;
   window.cancelarMinhaColeta = cancelarMinhaColeta;
   window.openRequestModal = openRequestModal;
@@ -1355,7 +1617,7 @@
   window.submitCollectionRequest = submitCollectionRequest;
   window.maskReqCEP = maskReqCEP;
   window.buscarCEPReq = buscarCEPReq;
-  window.carregarCidadesReq = carregarCidadesReq;
+  window.buscarCEPPerfil = buscarCEPPerfil;
   window.initLeafletMap = initLeafletMap;
   window.selecionarEmpresaNoModal = selecionarEmpresaNoModal;
   window.renderizarHistoricoAtividades = renderizarHistoricoAtividades;
@@ -1364,6 +1626,4 @@
   window.setRating = setRating;
   window.submitEvaluation = submitEvaluation;
   window.selecionarTipoEndereco = selecionarTipoEndereco;
-  window.alternarParaEnderecoPersonalizado = alternarParaEnderecoPersonalizado;
-  window.restaurarEnderecoPadrao = restaurarEnderecoPadrao;
 })();
