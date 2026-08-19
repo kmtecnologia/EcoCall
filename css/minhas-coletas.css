@@ -1005,7 +1005,7 @@
 }
 
 .req-section-divider {
-  border-top: 1px dashed #cce3d2;
+  border-top: 1px solid #e1eee4;
   margin: 0.4rem 0 0.2rem 0;
   padding-top: 0.8rem;
 }
@@ -1183,7 +1183,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px dashed #d6e8dc;
+  border-top: 1px solid #e1eee4;
   padding-top: 0.65rem;
   flex-wrap: wrap;
   gap: 0.5rem;
