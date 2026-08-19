@@ -41,19 +41,21 @@ function getDBConnection() {
             $pdo->exec("ALTER TABLE coletas ADD COLUMN protocolo VARCHAR(30) DEFAULT NULL");
         } catch (Exception $ex) {}
 
-        try {
-            $pdo->exec("ALTER TABLE usuarios ADD COLUMN status_conta ENUM('pendente_ativacao', 'ativo', 'bloqueado') NOT NULL DEFAULT 'ativo'");
-            $pdo->exec("ALTER TABLE usuarios ADD COLUMN email_verificado TINYINT(1) NOT NULL DEFAULT 1");
-            $pdo->exec("ALTER TABLE usuarios ADD COLUMN token_ativacao VARCHAR(64) DEFAULT NULL");
-            $pdo->exec("ALTER TABLE usuarios ADD COLUMN token_ativacao_expira DATETIME DEFAULT NULL");
-        } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN status_conta ENUM('pendente_ativacao', 'ativo', 'bloqueado') NOT NULL DEFAULT 'ativo'"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN email_verificado TINYINT(1) NOT NULL DEFAULT 1"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN token_ativacao VARCHAR(64) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN token_ativacao_expira DATETIME DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN google_id VARCHAR(100) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN microsoft_id VARCHAR(100) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL"); } catch (Exception $ex) {}
 
-        try {
-            $pdo->exec("ALTER TABLE empresas ADD COLUMN status_conta ENUM('pendente_ativacao', 'ativo', 'bloqueado') NOT NULL DEFAULT 'ativo'");
-            $pdo->exec("ALTER TABLE empresas ADD COLUMN email_verificado TINYINT(1) NOT NULL DEFAULT 1");
-            $pdo->exec("ALTER TABLE empresas ADD COLUMN token_ativacao VARCHAR(64) DEFAULT NULL");
-            $pdo->exec("ALTER TABLE empresas ADD COLUMN token_ativacao_expira DATETIME DEFAULT NULL");
-        } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN status_conta ENUM('pendente_ativacao', 'ativo', 'bloqueado') NOT NULL DEFAULT 'ativo'"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN email_verificado TINYINT(1) NOT NULL DEFAULT 1"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN token_ativacao VARCHAR(64) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN token_ativacao_expira DATETIME DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN google_id VARCHAR(100) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN microsoft_id VARCHAR(100) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL"); } catch (Exception $ex) {}
 
         try {
             $pdo->exec("
