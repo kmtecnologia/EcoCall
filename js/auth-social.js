@@ -63,12 +63,14 @@
   window.iniciarLoginGoogle = function () {
     if (window.toast) window.toast('🌐 Abrindo autenticação segura com o Google...');
 
-    var clientId = oauthConfig.google_client_id || '741295325881-mock.apps.googleusercontent.com';
+    var clientId = oauthConfig.google_client_id || '384579586318-ch6vut5a8ra1ghqj1rb72cs14881lg6p.apps.googleusercontent.com';
+    var state = 'google_' + Math.random().toString(36).substring(2);
     var googleAuthUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
       '?client_id=' + encodeURIComponent(clientId) +
       '&redirect_uri=' + encodeURIComponent(oauthConfig.redirect_uri) +
       '&response_type=token%20id_token' +
       '&scope=' + encodeURIComponent('openid profile email') +
+      '&state=' + encodeURIComponent(state) +
       '&nonce=' + Math.random().toString(36).substring(2) +
       '&prompt=select_account';
 
@@ -80,13 +82,14 @@
     if (window.toast) window.toast('🌐 Abrindo autenticação segura com a Microsoft...');
 
     var clientId = oauthConfig.microsoft_client_id || 'ecocall-microsoft-client-id';
+    var state = 'ms_' + Math.random().toString(36).substring(2);
     var msAuthUrl = 'https://login.microsoftonline.com/' + (oauthConfig.microsoft_tenant_id || 'common') + '/oauth2/v2.0/authorize' +
       '?client_id=' + encodeURIComponent(clientId) +
       '&response_type=token%20id_token' +
       '&redirect_uri=' + encodeURIComponent(oauthConfig.redirect_uri) +
       '&scope=' + encodeURIComponent('openid profile email User.Read') +
       '&response_mode=fragment' +
-      '&state=' + Math.random().toString(36).substring(2) +
+      '&state=' + encodeURIComponent(state) +
       '&nonce=' + Math.random().toString(36).substring(2) +
       '&prompt=select_account';
 
@@ -112,7 +115,11 @@
       'width=' + width + ',height=' + height + ',top=' + top + ',left=' + left + ',scrollbars=yes,status=no,toolbar=no,menubar=no'
     );
 
-    if (popupWindow) popupWindow.focus();
+    if (popupWindow) {
+      popupWindow.focus();
+    } else {
+      if (window.toast) window.toast('⚠ O pop-up foi bloqueado pelo navegador. Permita pop-ups para continuar.');
+    }
   }
 
   // Ouvinte de mensagens retornadas da janela popup (oauth_callback.html)
@@ -120,19 +127,39 @@
     if (event.origin !== window.location.origin) return;
     if (!event.data || event.data.type !== 'ECOCALL_OAUTH_RESPONSE') return;
 
-    var data = event.data.data || {};
     var provider = event.data.provider || 'google';
 
-    if (provider === 'google' || data.id_token) {
-      enviarLoginBackend('api/auth/google_login.php', {
-        id_token: data.id_token,
-        access_token: data.access_token
-      }, 'Google');
-    } else if (provider === 'microsoft' || data.access_token) {
+    // Tratamento de erros reportados pelo provedor OAuth
+    if (event.data.error) {
+      var err = event.data.error;
+      if (err.indexOf('access_denied') !== -1 || err.indexOf('canceled') !== -1) {
+        if (window.toast) window.toast('ℹ Autenticação cancelada pelo usuário.');
+      } else if (err.indexOf('AADSTS700016') !== -1 || err.indexOf('not found') !== -1 || err.indexOf('invalid_client') !== -1) {
+        // App ID não configurado no portal Microsoft Entra ID - abre modal assistido para teste instantâneo
+        abrirModalSimulacao('Microsoft', 'usuario@outlook.com', function (emailSim, nomeSim) {
+          enviarLoginBackend('api/auth/microsoft_login.php', {
+            test_email: emailSim,
+            test_name: nomeSim
+          }, 'Microsoft');
+        });
+      } else {
+        if (window.toast) window.toast('⚠ ' + err);
+      }
+      return;
+    }
+
+    var data = event.data.data || {};
+
+    if (provider === 'microsoft') {
       enviarLoginBackend('api/auth/microsoft_login.php', {
         id_token: data.id_token,
         access_token: data.access_token
       }, 'Microsoft');
+    } else {
+      enviarLoginBackend('api/auth/google_login.php', {
+        id_token: data.id_token,
+        access_token: data.access_token
+      }, 'Google');
     }
   });
 

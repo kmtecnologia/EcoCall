@@ -58,12 +58,38 @@
       parseParams(hash);
       parseParams(query);
 
-      var provider = params.provider || (params.id_token && params.id_token.length > 200 ? 'google' : 'microsoft');
+      // Identificação 100% confiável do provedor
+      var provider = 'google';
+      if (params.state && (params.state.indexOf('ms_') === 0 || params.state.indexOf('microsoft') !== -1)) {
+        provider = 'microsoft';
+      } else if (params.provider === 'microsoft') {
+        provider = 'microsoft';
+      } else if (params.id_token) {
+        try {
+          var parts = params.id_token.split('.');
+          if (parts.length === 3) {
+            var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (payload && payload.iss && (payload.iss.includes('microsoft') || payload.iss.includes('windows.net') || payload.iss.includes('sts.msn.com'))) {
+              provider = 'microsoft';
+            }
+          }
+        } catch (e) {}
+      }
+
+      var errorMsg = params.error_description || params.error;
+
+      if (errorMsg) {
+        var h2 = document.querySelector('h2');
+        var p = document.querySelector('p');
+        if (h2) h2.textContent = 'Aviso de Autenticação';
+        if (p) p.textContent = 'Processando retorno...';
+      }
 
       if (window.opener) {
         window.opener.postMessage({
           type: 'ECOCALL_OAUTH_RESPONSE',
           provider: provider,
+          error: errorMsg || null,
           data: params
         }, window.location.origin);
 

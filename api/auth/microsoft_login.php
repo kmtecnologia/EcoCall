@@ -21,6 +21,7 @@ $testName = trim($data['test_name'] ?? '');
 $microsoftSub = null;
 $email = null;
 $nome = null;
+$picture = null;
 
 if (!empty($accessToken)) {
     // 1. Consulta o perfil do usuário diretamente na API Microsoft Graph oficial
@@ -46,15 +47,31 @@ if (!empty($accessToken)) {
             $nome = trim($me['displayName'] ?? 'Usuário Microsoft');
         }
     }
+
+    // Tenta buscar a foto de perfil do usuário no Microsoft Graph se disponível
+    if (!empty($microsoftSub)) {
+        $photoUrl = 'https://graph.microsoft.com/v1.0/me/photo/$value';
+        $photoResp = @file_get_contents($photoUrl, false, $ctx);
+        if ($photoResp !== false && strlen($photoResp) > 100) {
+            $uploadDir = __DIR__ . '/../../uploads/avatars/';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0755, true);
+            }
+            $filename = 'avatar_ms_' . md5($email) . '_' . time() . '.jpg';
+            if (@file_put_contents($uploadDir . $filename, $photoResp)) {
+                $picture = 'uploads/avatars/' . $filename;
+            }
+        }
+    }
 }
 
 // Fallback por ID Token JWT (MSAL)
 if (empty($email) && !empty($idToken) && substr_count($idToken, '.') === 2) {
     $parts = explode('.', $idToken);
     $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
-    if ($payload && (!empty($payload['preferred_username']) || !empty($payload['email']))) {
+    if ($payload && (!empty($payload['preferred_username']) || !empty($payload['email']) || !empty($payload['upn']))) {
         $microsoftSub = $payload['oid'] ?? $payload['sub'] ?? ('ms_' . time());
-        $email = strtolower(trim($payload['preferred_username'] ?? $payload['email']));
+        $email = strtolower(trim($payload['preferred_username'] ?? $payload['email'] ?? $payload['upn']));
         $nome = trim($payload['name'] ?? 'Usuário Microsoft');
     }
 }
@@ -78,16 +95,18 @@ $stmt->execute([':email' => $email, ':mid' => $microsoftSub]);
 $user = $stmt->fetch();
 
 if ($user) {
-    // Atualiza microsoft_id e garante ativação
+    // Atualiza microsoft_id, avatar e garante ativação
     $stmtUp = $pdo->prepare("
         UPDATE usuarios 
         SET microsoft_id = COALESCE(microsoft_id, :mid),
+            avatar_url = COALESCE(avatar_url, :avatar),
             status_conta = 'ativo',
             email_verificado = 1
         WHERE id = :id
     ");
     $stmtUp->execute([
         ':mid' => $microsoftSub,
+        ':avatar' => $picture,
         ':id' => $user['id']
     ]);
 
@@ -99,14 +118,15 @@ if ($user) {
     $senhaHash = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
     
     $stmtIns = $pdo->prepare("
-        INSERT INTO usuarios (nome, email, senha, tipo, pontos, status_conta, email_verificado, microsoft_id, cidade, uf)
-        VALUES (:nome, :email, :senha, 'user', 50, 'ativo', 1, :mid, 'Santos', 'SP')
+        INSERT INTO usuarios (nome, email, senha, tipo, pontos, status_conta, email_verificado, microsoft_id, avatar_url, cidade, uf)
+        VALUES (:nome, :email, :senha, 'user', 50, 'ativo', 1, :mid, :avatar, 'Santos', 'SP')
     ");
     $stmtIns->execute([
         ':nome' => $nome,
         ':email' => $email,
         ':senha' => $senhaHash,
-        ':mid' => $microsoftSub
+        ':mid' => $microsoftSub,
+        ':avatar' => $picture
     ]);
 
     $newId = $pdo->lastInsertId();
@@ -118,16 +138,21 @@ if ($user) {
 
 // 3. Inicializa sessão PHP
 if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
-    session_start();
+    if (!headers_sent()) {
+        ini_set('session.cookie_httponly', 1);
+        ini_set('session.use_only_cookies', 1);
+        session_start();
+    }
 }
-session_regenerate_id(true);
+if (session_status() === PHP_SESSION_ACTIVE && !headers_sent()) {
+    session_regenerate_id(true);
+}
 
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['nome'] = $user['nome'];
 $_SESSION['email'] = $user['email'];
 $_SESSION['tipo'] = 'user';
+$_SESSION['avatar_url'] = $user['avatar_url'] ?? $picture ?? null;
 unset($_SESSION['empresa_id']);
 
 sendJsonResponse([
@@ -149,9 +174,10 @@ sendJsonResponse([
         'cidade' => $user['cidade'] ?? 'Santos',
         'uf' => $user['uf'] ?? 'SP',
         'endereco' => $user['endereco'] ?? '',
-        'avatar_url' => $user['avatar_url'] ?? '',
+        'avatar_url' => $user['avatar_url'] ?? $picture ?? '',
         'tipo' => 'user',
         'pontos' => $user['pontos'] ?? 50
     ],
     'redirect' => 'ecocall-dashbord_usuario.html'
 ]);
+

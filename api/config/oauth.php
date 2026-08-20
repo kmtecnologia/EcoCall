@@ -19,10 +19,31 @@ if (!defined('MICROSOFT_TENANT_ID')) {
 }
 
 function getOAuthPublicConfig() {
+    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    
+    // Resolve caminho base para a raiz do projeto EcoCall
+    $basePath = '/EcoCall';
+    if (!empty($_SERVER['SCRIPT_NAME'])) {
+        $scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
+        $pos = strpos($scriptPath, '/api/');
+        if ($pos !== false) {
+            $basePath = substr($scriptPath, 0, $pos);
+        } else {
+            $candidate = dirname($scriptPath);
+            if (!empty($candidate) && $candidate !== '/' && strpos($candidate, ':') === false) {
+                $basePath = rtrim($candidate, '/');
+            }
+        }
+    }
+    if (empty($basePath)) {
+        $basePath = '/EcoCall';
+    }
+    
     return [
         'google_client_id' => GOOGLE_CLIENT_ID,
         'microsoft_client_id' => MICROSOFT_CLIENT_ID,
         'microsoft_tenant_id' => MICROSOFT_TENANT_ID,
-        'redirect_uri' => ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/EcoCall/'
+        'redirect_uri' => $proto . $host . $basePath . '/oauth_callback.html'
     ];
 }

@@ -123,11 +123,15 @@ if ($user) {
 
 // 3. Inicializa sessão PHP
 if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
-    session_start();
+    if (!headers_sent()) {
+        ini_set('session.cookie_httponly', 1);
+        ini_set('session.use_only_cookies', 1);
+        session_start();
+    }
 }
-session_regenerate_id(true);
+if (session_status() === PHP_SESSION_ACTIVE && !headers_sent()) {
+    session_regenerate_id(true);
+}
 
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['nome'] = $user['nome'];
