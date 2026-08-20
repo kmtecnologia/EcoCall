@@ -893,3 +893,255 @@
   .coleta-date, .coleta-weight { display: none; }
   .detail-panel { width: 100%; }
 }
+
+/* ==========================================================================
+   7. ESTILIZAÇÃO PREMIUM DO MAPA INTERATIVO (LEAFLET & ECOPONTOS)
+   ========================================================================== */
+.map-page-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1.25rem;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(14, 43, 22, 0.04);
+  height: 600px;
+  min-height: 600px;
+}
+
+@media (max-width: 992px) {
+  .map-page-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: auto;
+  }
+}
+
+.map-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid var(--border-light);
+  background: #fafcfb;
+}
+
+.map-sidebar-top {
+  padding: 1.1rem 1.2rem;
+  border-bottom: 1px solid var(--border-light);
+  background: #ffffff;
+}
+
+.map-points-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.map-point-card {
+  background: #ffffff;
+  border: 1.5px solid var(--border-light);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.map-point-card:hover,
+.map-point-card.active {
+  border-color: var(--brand-green);
+  background: #f0fdf4;
+  transform: translateX(3px);
+  box-shadow: 0 4px 14px rgba(62, 201, 106, 0.12);
+}
+
+.map-point-card h4 {
+  font-family: var(--font-syne);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.map-point-card p {
+  font-size: 0.78rem;
+  color: var(--text-grey);
+}
+
+.map-point-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 0.74rem;
+}
+
+.map-canvas-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  min-height: 500px;
+}
+
+#map-canvas {
+  height: 100%;
+  width: 100%;
+  background: #eef3ef;
+  z-index: 1;
+}
+
+/* Marcadores Personalizados com Efeito Pulsante */
+.custom-pin-marker {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-bubble {
+  width: 36px;
+  height: 36px;
+  background: #0d2415;
+  color: #3ec96a;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(10, 32, 16, 0.35);
+  border: 2px solid #3ec96a;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.pin-bubble.coop { background: #0e371d; border-color: #3ec96a; color: #3ec96a; }
+.pin-bubble.reee { background: #2e1065; border-color: #a855f7; color: #c084fc; }
+.pin-bubble.ind  { background: #1e3a8a; border-color: #60a5fa; color: #93c5fd; }
+.pin-bubble.spec { background: #78350f; border-color: #f59e0b; color: #fbbf24; }
+
+.custom-pin-marker:hover .pin-bubble {
+  transform: rotate(-45deg) scale(1.18);
+  box-shadow: 0 6px 20px rgba(62, 201, 106, 0.45);
+}
+
+.pin-icon {
+  transform: rotate(45deg);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pin-pulse {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(62, 201, 106, 0.3);
+  animation: markerPulseRing 2.2s infinite ease-out;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes markerPulseRing {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Card Popup Customizado do Leaflet */
+.leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 16px 36px rgba(10, 32, 16, 0.18) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(62, 201, 106, 0.25) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.45 !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+.map-popup-card {
+  padding: 1.2rem 1.3rem;
+  font-family: var(--font-dm, 'DM Sans', sans-serif);
+  min-width: 250px;
+}
+
+.map-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.map-popup-title {
+  font-family: var(--font-syne, 'Syne', sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark, #0d2415);
+}
+
+.map-popup-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  background: #e8f5e9;
+  color: #1d8045;
+  white-space: nowrap;
+}
+
+.map-popup-bairro {
+  font-size: 0.82rem;
+  color: var(--text-grey, #627d6a);
+  margin-bottom: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.map-popup-stars {
+  font-size: 0.8rem;
+  color: #f59e0b;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.map-popup-btn {
+  width: 100%;
+  background: #0d2415;
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-family: var(--font-syne, 'Syne', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.map-popup-btn:hover {
+  background: #1b5e20;
+  box-shadow: 0 4px 14px rgba(27, 94, 32, 0.28);
+}

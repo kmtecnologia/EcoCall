@@ -210,20 +210,43 @@
   function initColetasSSE() {
     if (typeof EventSource === 'undefined') return;
     try {
+      var isFirstSSE = true;
+      var lastSeenChecksum = null;
       var es = new EventSource('api/coletas/sse.php');
+
       es.addEventListener('status_updated', function (e) {
         try {
           var data = JSON.parse(e.data);
           if (data && data.latest) {
             var proto = data.latest.protocolo || ('COL-' + data.latest.id);
             var st = data.latest.status || '';
-            toast('🌱 Protocolo ' + proto + ' atualizado em tempo real: "' + st + '"!');
+            var currentChecksum = proto + ':' + st;
+
+            // Só exibe popup se for uma alteração real ocorrida após o carregamento inicial
+            if (!isFirstSSE && lastSeenChecksum !== null && lastSeenChecksum !== currentChecksum) {
+              toast('🌱 Protocolo ' + proto + ' atualizado em tempo real: "' + st + '"!');
+            }
+
+            isFirstSSE = false;
+            lastSeenChecksum = currentChecksum;
             
             if (window.carregarColetasDoBanco) window.carregarColetasDoBanco();
             if (window.carregarPainelUsuario) window.carregarPainelUsuario();
             if (window.carregarRelatoriosEmpresa) window.carregarRelatoriosEmpresa();
           }
         } catch (err) {}
+      });
+
+      es.addEventListener('initial_state', function (e) {
+        try {
+          var data = JSON.parse(e.data);
+          if (data && data.latest) {
+            var proto = data.latest.protocolo || ('COL-' + data.latest.id);
+            var st = data.latest.status || '';
+            lastSeenChecksum = proto + ':' + st;
+          }
+        } catch(err) {}
+        isFirstSSE = false;
       });
     } catch (err) {}
   }

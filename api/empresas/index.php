@@ -132,13 +132,15 @@ if ($totalEmpresas === 0) {
             'uf' => 'SP',
             'categoria' => 'Caçambas & Coleta Especial',
             'descricao' => 'Serviços de transporte, caçambas estacionárias e destinação legalizada para empresas e condomínios.',
-            'nota_media' => 4.70
+            'nota_media' => 4.70,
+            'lat' => -23.958740,
+            'lng' => -46.332850
         ]
     ];
 
     $insStmt = $pdo->prepare("
-        INSERT IGNORE INTO empresas (razao_social, cnpj, email, senha, telefone, cep, logradouro, numero, bairro, cidade, uf, endereco, categoria, descricao, nota_media)
-        VALUES (:razao_social, :cnpj, :email, :senha, :telefone, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :endereco, :categoria, :descricao, :nota_media)
+        INSERT IGNORE INTO empresas (razao_social, cnpj, email, senha, telefone, cep, logradouro, numero, bairro, cidade, uf, endereco, categoria, descricao, nota_media, lat, lng)
+        VALUES (:razao_social, :cnpj, :email, :senha, :telefone, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :endereco, :categoria, :descricao, :nota_media, :lat, :lng)
     ");
 
     foreach ($realCompanies as $c) {
@@ -157,21 +159,118 @@ if ($totalEmpresas === 0) {
             ':endereco' => $c['logradouro'] . ', ' . $c['numero'] . ' - ' . $c['bairro'] . ', ' . $c['cidade'] . ' - ' . $c['uf'],
             ':categoria' => $c['categoria'],
             ':descricao' => $c['descricao'],
-            ':nota_media' => $c['nota_media']
+            ':nota_media' => $c['nota_media'],
+            ':lat' => $c['lat'] ?? null,
+            ':lng' => $c['lng'] ?? null
         ]);
     }
 }
 
+// Atualização de coordenadas exatas caso os registros existentes ainda não as possuam
+$coordUpdates = [
+    'Terra Santos Ambiental (Consórcio Público)' => ['lat' => -23.955400, 'lng' => -46.321850],
+    'ONG Sem Fronteiras (Cooperativa)'           => ['lat' => -23.932820, 'lng' => -46.324150],
+    'Comares (Cooperativa de Materiais Recicláveis)' => ['lat' => -23.923810, 'lng' => -46.368420],
+    'Alquimista Reciclagem'                      => ['lat' => -23.954200, 'lng' => -46.320980],
+    'Recimar Reciclagem & Sucata'                => ['lat' => -23.968940, 'lng' => -46.307520],
+    'Fundação Settaport (Lixo Eletrônico REEE)'  => ['lat' => -23.934890, 'lng' => -46.325980],
+    'Reciclar é Viver (Cooperativa Comunidade)'  => ['lat' => -23.951470, 'lng' => -46.336120],
+    'Santista Ambiental'                         => ['lat' => -23.958740, 'lng' => -46.332850]
+];
+
+$updStmt = $pdo->prepare("UPDATE empresas SET lat = :lat, lng = :lng WHERE (lat IS NULL OR lat = 0) AND razao_social = :razao");
+foreach ($coordUpdates as $nome => $coords) {
+    try {
+        $updStmt->execute([':lat' => $coords['lat'], ':lng' => $coords['lng'], ':razao' => $nome]);
+    } catch (Exception $ex) {}
+}
+
 $stmt = $pdo->query("
-    SELECT id, razao_social, cnpj, email, telefone, cep, logradouro, numero, bairro, cidade, uf, endereco, categoria, descricao, nota_media, coletas_concluidas, created_at
+    SELECT id, razao_social, cnpj, email, telefone, cep, logradouro, numero, bairro, cidade, uf, endereco, categoria, descricao, nota_media, coletas_concluidas, avatar_url, lat, lng, created_at
     FROM empresas
     ORDER BY nota_media DESC, razao_social ASC
 ");
 
 $empresas = $stmt->fetchAll();
 
+// Adiciona os ecopontos municipais oficiais de Santos para visualização completa no mapa
+$ecopontosMunicipais = [
+    [
+        'id' => 901,
+        'razao_social' => 'Ecoponto Municipal - Vila Nova',
+        'bairro' => 'Vila Nova',
+        'cidade' => 'Santos',
+        'uf' => 'SP',
+        'logradouro' => 'Rua São Paulo',
+        'numero' => '120',
+        'endereco' => 'Rua São Paulo, 120 - Vila Nova, Santos - SP',
+        'categoria' => 'Ecoponto Municipal (Entulho & Recicláveis)',
+        'descricao' => 'Ponto de entrega voluntária de recicláveis, móveis desmontados e resíduos da construção civil.',
+        'nota_media' => 4.80,
+        'lat' => -23.942150,
+        'lng' => -46.328920,
+        'tipo' => 'coop',
+        'icon' => '📦'
+    ],
+    [
+        'id' => 902,
+        'razao_social' => 'Ecoponto Municipal - Campo Grande',
+        'bairro' => 'Campo Grande',
+        'cidade' => 'Santos',
+        'uf' => 'SP',
+        'logradouro' => 'Rua Carvalho de Mendonça',
+        'numero' => '510',
+        'endereco' => 'Rua Carvalho de Mendonça, 510 - Campo Grande, Santos - SP',
+        'categoria' => 'Ecoponto Municipal (Grandes Volumes)',
+        'descricao' => 'Ecoponto público para descarte correto de materiais recicláveis, podas de árvores e eletrônicos.',
+        'nota_media' => 4.90,
+        'lat' => -23.958430,
+        'lng' => -46.345890,
+        'tipo' => 'coop',
+        'icon' => '📦'
+    ],
+    [
+        'id' => 903,
+        'razao_social' => 'Ecoponto Municipal - Marapé',
+        'bairro' => 'Marapé',
+        'cidade' => 'Santos',
+        'uf' => 'SP',
+        'logradouro' => 'Rua São Judas Tadeu',
+        'numero' => '80',
+        'endereco' => 'Rua São Judas Tadeu, 80 - Marapé, Santos - SP',
+        'categoria' => 'Ecoponto Municipal (Bairro Marapé)',
+        'descricao' => 'Unidade municipal de triagem e recebimento de resíduos reutilizáveis.',
+        'nota_media' => 4.75,
+        'lat' => -23.965310,
+        'lng' => -46.342120,
+        'tipo' => 'coop',
+        'icon' => '📦'
+    ],
+    [
+        'id' => 904,
+        'razao_social' => 'Ecoponto Municipal - Ponta da Praia',
+        'bairro' => 'Ponta da Praia',
+        'cidade' => 'Santos',
+        'uf' => 'SP',
+        'logradouro' => 'Av. Rei Alberto I',
+        'numero' => '180',
+        'endereco' => 'Av. Rei Alberto I, 180 - Ponta da Praia, Santos - SP',
+        'categoria' => 'Ecoponto Municipal (Orla e Estuário)',
+        'descricao' => 'Ecoponto para a região dos canais 6 e 7, orla e Ponta da Praia.',
+        'nota_media' => 4.85,
+        'lat' => -23.985620,
+        'lng' => -46.301450,
+        'tipo' => 'coop',
+        'icon' => '📦'
+    ]
+];
+
+// Mescla as empresas cadastradas com os ecopontos oficiais
+$todasParaMapa = array_merge($empresas, $ecopontosMunicipais);
+
 sendJsonResponse([
     'success' => true,
-    'total' => count($empresas),
-    'empresas' => $empresas
+    'total' => count($todasParaMapa),
+    'empresas' => $todasParaMapa,
+    'empresas_cadastradas' => $empresas
 ]);

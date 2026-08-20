@@ -56,6 +56,8 @@ function getDBConnection() {
         try { $pdo->exec("ALTER TABLE empresas ADD COLUMN google_id VARCHAR(100) DEFAULT NULL"); } catch (Exception $ex) {}
         try { $pdo->exec("ALTER TABLE empresas ADD COLUMN microsoft_id VARCHAR(100) DEFAULT NULL"); } catch (Exception $ex) {}
         try { $pdo->exec("ALTER TABLE empresas ADD COLUMN avatar_url VARCHAR(255) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN lat DECIMAL(10,8) DEFAULT NULL"); } catch (Exception $ex) {}
+        try { $pdo->exec("ALTER TABLE empresas ADD COLUMN lng DECIMAL(11,8) DEFAULT NULL"); } catch (Exception $ex) {}
 
         try {
             $pdo->exec("

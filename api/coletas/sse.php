@@ -65,7 +65,25 @@ while ($counter < $maxExecutions) {
         $checksumStr = ($stats['status_checksum'] ?? '') . '_' . ($stats['total'] ?? '0');
         $currentStateHash = md5($checksumStr);
 
-        if ($currentStateHash !== $lastStateHash) {
+        if ($lastStateHash === '') {
+            $lastStateHash = $currentStateHash;
+
+            $eventData = [
+                'type' => 'initial_state',
+                'timestamp' => date('Y-m-d H:i:s'),
+                'stats' => [
+                    'total' => intval($stats['total'] ?? 0),
+                    'concluidas' => intval($stats['concluidas'] ?? 0),
+                    'agendadas' => intval($stats['agendadas'] ?? 0),
+                    'pendentes' => intval($stats['pendentes'] ?? 0)
+                ],
+                'latest' => $latest
+            ];
+
+            echo "event: initial_state\n";
+            echo "data: " . json_encode($eventData, JSON_UNESCAPED_UNICODE) . "\n\n";
+            flush();
+        } elseif ($currentStateHash !== $lastStateHash) {
             $lastStateHash = $currentStateHash;
 
             $eventData = [

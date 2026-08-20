@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/ecocall-dashboard.css">
   <link rel="stylesheet" href="css/empresa-pages.css">
   <link rel="stylesheet" href="css/minhas-coletas.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body class="dash-page">
 
@@ -371,18 +372,55 @@
 
         <!-- ==================== ABA 4: VER NO MAPA ==================== -->
         <div id="tab-mapa" class="user-tab-content" style="display:none;">
-          <div class="content-card">
+          
+          <div class="stats-row" style="margin-bottom:1.2rem;">
+            <div class="stat-mini">
+              <div class="stat-mini-lbl">Pontos Mapeados</div>
+              <div class="stat-mini-val" id="map-total-count">8</div>
+              <div class="stat-mini-sub green">Cooperativas e Ecopontos</div>
+            </div>
+            <div class="stat-mini">
+              <div class="stat-mini-lbl">Tipos de Resíduos</div>
+              <div class="stat-mini-val" style="font-size:1.25rem;">8 categorias</div>
+              <div class="stat-mini-sub green">Recicláveis & REEE</div>
+            </div>
+          </div>
+
+          <div class="content-card" style="padding:1.4rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:1rem;">
               <div>
-                <h2>Mapa de Cooperativas e Ecopontos 🗺️</h2>
-                <p class="card-sub">Localize cooperativas, ecopontos e empresas coletoras parceiras em Santos e Baixada Santista.</p>
+                <h2>Mapa Interativo de Coleta & Ecopontos 🗺️</h2>
+                <p class="card-sub">Explore os pontos de coleta e cooperativas credenciadas na cidade de Santos.</p>
               </div>
-              <button class="btn-save" style="padding:0.6rem 1.1rem;font-size:0.85rem;border-radius:12px;" onclick="openRequestModal()">
-                + Chamar Coleta Residencial
-              </button>
+              <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                <button class="btn-save" style="background:#f0fdf4;color:#166534;border:1.5px solid #86efac;padding:0.55rem 1rem;font-size:0.82rem;border-radius:10px;" onclick="centralizarMapaEmSantos()">
+                  🎯 Centralizar Santos
+                </button>
+                <button class="btn-save" style="padding:0.55rem 1rem;font-size:0.82rem;border-radius:10px;" onclick="openRequestModal()">
+                  + Chamar Coleta
+                </button>
+              </div>
             </div>
-            
-            <div id="map-canvas" style="height:500px; width:100%; border-radius:16px; border:1px solid var(--border-light); z-index:1;"></div>
+
+            <!-- Layout Dividido (Sidebar de Pontos + Mapa) -->
+            <div class="map-page-layout">
+              <div class="map-sidebar-panel">
+                <div class="map-sidebar-top">
+                  <div class="dash-search-box" style="width:100%;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#627d6a" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="search-map-points" placeholder="Buscar no mapa por nome ou bairro…" oninput="filterMapPointsList()">
+                  </div>
+                </div>
+
+                <div class="map-points-list" id="map-points-list">
+                  <!-- Renderizado dinamicamente via JS -->
+                </div>
+              </div>
+
+              <div class="map-canvas-wrapper">
+                <div id="map-canvas"></div>
+              </div>
+            </div>
           </div>
         </div> <!-- Fim de tab-mapa -->
 

@@ -27,14 +27,16 @@
   ];
 
   var defaultSantosCompanies = [
-    { id: 1, razao_social: 'Terra Santos Ambiental (Consórcio Público)', bairro: 'Consórcio Público', cidade: 'Santos', uf: 'SP', categoria: 'Consórcio Público - Todos os bairros', nota_media: 4.9, lat: -23.9535, lng: -46.3312 },
-    { id: 2, razao_social: 'ONG Sem Fronteiras (Cooperativa)', bairro: 'Paquetá', cidade: 'Santos', uf: 'SP', categoria: 'Cooperativa Reciclagem Geral', nota_media: 4.8, lat: -23.9312, lng: -46.3218 },
-    { id: 3, razao_social: 'Comares (Cooperativa de Materiais Recicláveis)', bairro: 'Alemoa', cidade: 'Santos', uf: 'SP', categoria: 'Cooperativa Industrial', nota_media: 4.7, lat: -23.9245, lng: -46.3650 },
-    { id: 4, razao_social: 'Alquimista Reciclagem', bairro: 'Macuco', cidade: 'Santos', uf: 'SP', categoria: 'Plásticos, Metais e Sucata', nota_media: 5.0, lat: -23.9610, lng: -46.3150 },
-    { id: 5, razao_social: 'Recimar Reciclagem & Sucata', bairro: 'Estuário', cidade: 'Santos', uf: 'SP', categoria: 'Metais e Plásticos', nota_media: 4.6, lat: -23.9780, lng: -46.3020 },
-    { id: 6, razao_social: 'Fundação Settaport (Lixo Eletrônico REEE)', bairro: 'Paquetá', cidade: 'Santos', uf: 'SP', categoria: 'Lixo Eletrônico REEE', nota_media: 4.9, lat: -23.9340, lng: -46.3260 },
-    { id: 7, razao_social: 'Reciclar é Viver (Cooperativa Comunidade)', bairro: 'Vila Mathias', cidade: 'Santos', uf: 'SP', categoria: 'Vidros, Papéis e Papelão', nota_media: 4.8, lat: -23.9550, lng: -46.3280 },
-    { id: 8, razao_social: 'Santista Ambiental', bairro: 'Gonzaga', cidade: 'Santos', uf: 'SP', categoria: 'Coleta Especial e Condomínios', nota_media: 5.0, lat: -23.9680, lng: -46.3340 }
+    { id: 1, razao_social: 'Terra Santos Ambiental (Consórcio Público)', bairro: 'Consórcio Público', cidade: 'Santos', uf: 'SP', categoria: 'Consórcio Público - Todos os bairros', tipo: 'coop', icon: '🏢', nota_media: 4.9, lat: -23.9535, lng: -46.3312, endereco: 'Av. Rangel Pestana, 120 - Vila Mathias' },
+    { id: 2, razao_social: 'ONG Sem Fronteiras (Cooperativa)', bairro: 'Paquetá', cidade: 'Santos', uf: 'SP', categoria: 'Cooperativa Reciclagem Geral', tipo: 'coop', icon: '♻️', nota_media: 4.8, lat: -23.9312, lng: -46.3218, endereco: 'Rua Dr. Cochrane, 85 - Paquetá' },
+    { id: 3, razao_social: 'Comares (Cooperativa de Materiais Recicláveis)', bairro: 'Alemoa', cidade: 'Santos', uf: 'SP', categoria: 'Cooperativa Industrial', tipo: 'ind', icon: '📦', nota_media: 4.7, lat: -23.9245, lng: -46.3650, endereco: 'Av. Marginal Direita Anchieta, 3400 - Alemoa' },
+    { id: 4, razao_social: 'Alquimista Reciclagem', bairro: 'Macuco', cidade: 'Santos', uf: 'SP', categoria: 'Plásticos, Metais e Sucata', tipo: 'spec', icon: '🥫', nota_media: 5.0, lat: -23.9610, lng: -46.3150, endereco: 'Rua Silva Jardim, 410 - Macuco' },
+    { id: 5, razao_social: 'Recimar Reciclagem & Sucata', bairro: 'Estuário', cidade: 'Santos', uf: 'SP', categoria: 'Metais e Plásticos', tipo: 'spec', icon: '🥫', nota_media: 4.6, lat: -23.9780, lng: -46.3020, endereco: 'Av. Afonso Pena, 610 - Estuário' },
+    { id: 6, razao_social: 'Fundação Settaport (Lixo Eletrônico REEE)', bairro: 'Paquetá', cidade: 'Santos', uf: 'SP', categoria: 'Lixo Eletrônico REEE', tipo: 'reee', icon: '💻', nota_media: 4.9, lat: -23.9340, lng: -46.3260, endereco: 'Rua José Ricardo, 55 - Paquetá' },
+    { id: 7, razao_social: 'Reciclar é Viver (Cooperativa Comunidade)', bairro: 'Vila Mathias', cidade: 'Santos', uf: 'SP', categoria: 'Vidros, Papéis e Papelão', tipo: 'coop', icon: '♻️', nota_media: 4.8, lat: -23.9550, lng: -46.3280, endereco: 'Rua Joaquim Távora, 230 - Vila Mathias' },
+    { id: 8, razao_social: 'Santista Ambiental', bairro: 'Gonzaga', cidade: 'Santos', uf: 'SP', categoria: 'Coleta Especial e Condomínios', tipo: 'coop', icon: '🌱', nota_media: 5.0, lat: -23.9680, lng: -46.3340, endereco: 'Av. Ana Costa, 460 - Gonzaga' },
+    { id: 9, razao_social: 'Ecoponto Municipal - Vila Nova', bairro: 'Vila Nova', cidade: 'Santos', uf: 'SP', categoria: 'Ecoponto Público Municipal', tipo: 'coop', icon: '📦', nota_media: 4.8, lat: -23.9420, lng: -46.3290, endereco: 'Rua São Paulo, 120 - Vila Nova' },
+    { id: 10, razao_social: 'Ecoponto Municipal - Campo Grande', bairro: 'Campo Grande', cidade: 'Santos', uf: 'SP', categoria: 'Ecoponto Público Municipal', tipo: 'coop', icon: '📦', nota_media: 4.9, lat: -23.9580, lng: -46.3450, endereco: 'Rua Carvalho de Mendonça, 510 - Campo Grande' }
   ];
 
   var monthsNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -662,39 +664,218 @@
   /* ==========================================================================
      7. MAPA INTERATIVO LEAFLET.JS (ABA VER NO MAPA)
      ========================================================================== */
+  var markersMap = {};
+
+  var santosBairrosCoords = {
+    'gonzaga': { lat: -23.958740, lng: -46.332850 },
+    'boqueirao': { lat: -23.969420, lng: -46.324180 },
+    'boqueirão': { lat: -23.969420, lng: -46.324180 },
+    'embaré': { lat: -23.972150, lng: -46.315200 },
+    'embare': { lat: -23.972150, lng: -46.315200 },
+    'ponta da praia': { lat: -23.985620, lng: -46.301450 },
+    'aparecida': { lat: -23.974890, lng: -46.308940 },
+    'macuco': { lat: -23.955400, lng: -46.321850 },
+    'estuário': { lat: -23.968940, lng: -46.307520 },
+    'estuario': { lat: -23.968940, lng: -46.307520 },
+    'vila mathias': { lat: -23.951470, lng: -46.336120 },
+    'encruzilhada': { lat: -23.952800, lng: -46.327500 },
+    'campo grande': { lat: -23.958430, lng: -46.345890 },
+    'marape': { lat: -23.965310, lng: -46.342120 },
+    'marapé': { lat: -23.965310, lng: -46.342120 },
+    'jose menino': { lat: -23.967890, lng: -46.348920 },
+    'josé menino': { lat: -23.967890, lng: -46.348920 },
+    'pompeia': { lat: -23.968500, lng: -46.341200 },
+    'pompéia': { lat: -23.968500, lng: -46.341200 },
+    'centro': { lat: -23.935400, lng: -46.328900 },
+    'paqueta': { lat: -23.932820, lng: -46.324150 },
+    'paquetá': { lat: -23.932820, lng: -46.324150 },
+    'vila nova': { lat: -23.942150, lng: -46.328920 },
+    'alemoa': { lat: -23.923810, lng: -46.368420 },
+    'chico de paula': { lat: -23.928900, lng: -46.365400 },
+    'saboó': { lat: -23.931200, lng: -46.345600 },
+    'saboo': { lat: -23.931200, lng: -46.345600 },
+    'valongo': { lat: -23.932100, lng: -46.334500 }
+  };
+
+  function getCoordsForEmpresa(emp) {
+    if (emp.lat && emp.lng && parseFloat(emp.lat) !== 0 && parseFloat(emp.lng) !== 0) {
+      return { lat: parseFloat(emp.lat), lng: parseFloat(emp.lng) };
+    }
+
+    var bairroKey = (emp.bairro || '').toLowerCase().trim();
+    if (bairroKey && santosBairrosCoords[bairroKey]) {
+      return santosBairrosCoords[bairroKey];
+    }
+
+    for (var k in santosBairrosCoords) {
+      if (bairroKey.indexOf(k) !== -1 || (emp.endereco || '').toLowerCase().indexOf(k) !== -1) {
+        return santosBairrosCoords[k];
+      }
+    }
+
+    return { lat: -23.9550, lng: -46.3322 };
+  }
+
   function initLeafletMap(empresas) {
     var mapDiv = document.getElementById('map-canvas');
     if (!mapDiv || typeof window.L === 'undefined') return;
 
-    if (!mapInstance) {
-      mapInstance = window.L.map('map-canvas').setView([-23.9618, -46.3322], 13);
+    var points = (empresas && empresas.length > 0) ? empresas : defaultSantosCompanies;
 
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    if (!mapInstance) {
+      mapInstance = window.L.map('map-canvas', {
+        zoomControl: true,
+        scrollWheelZoom: true
+      }).setView([-23.9550, -46.3322], 13);
+
+      // CartoDB Voyager tiles (Moderno, tons ecológicos e tipografia nítida)
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
         maxZoom: 19
       }).addTo(mapInstance);
     } else {
-      mapInstance.invalidateSize();
+      setTimeout(function () {
+        mapInstance.invalidateSize();
+      }, 100);
     }
 
-    (empresas || []).forEach(function (emp) {
-      var lat = emp.lat || -23.9618 + (Math.random() - 0.5) * 0.04;
-      var lng = emp.lng || -46.3322 + (Math.random() - 0.5) * 0.04;
-      var name = emp.razao_social || 'Empresa Recicladora';
-      var cat = emp.categoria || 'Coleta de Resíduos';
+    // Limpa marcadores anteriores para evitar duplicações
+    Object.keys(markersMap).forEach(function (k) {
+      if (markersMap[k]) mapInstance.removeLayer(markersMap[k]);
+    });
+    markersMap = {};
+
+    points.forEach(function (emp) {
+      var coords = getCoordsForEmpresa(emp);
+      var lat = coords.lat;
+      var lng = coords.lng;
+      var name = emp.razao_social || 'Ponto de Coleta';
+      var cat = emp.categoria || 'Reciclagem Geral';
+      var enderecoCompleto = emp.endereco || ((emp.logradouro ? emp.logradouro + (emp.numero ? ', ' + emp.numero : '') + ' - ' : '') + (emp.bairro ? emp.bairro + ', ' : '') + (emp.cidade || 'Santos') + ' - ' + (emp.uf || 'SP'));
+      var nota = parseFloat(emp.nota_media || 5.0).toFixed(1);
+      var icon = emp.icon || (cat.toLowerCase().includes('eletrônico') ? '💻' : (cat.toLowerCase().includes('metal') ? '🥫' : (cat.toLowerCase().includes('óleo') ? '🛢️' : '♻️')));
+      var pinType = emp.tipo || (cat.toLowerCase().includes('eletrônico') ? 'reee' : (cat.toLowerCase().includes('metal') ? 'spec' : 'coop'));
+
+      var customIcon = window.L.divIcon({
+        className: 'custom-pin-wrapper',
+        html: '<div class="custom-pin-marker">' +
+                '<div class="pin-pulse"></div>' +
+                '<div class="pin-bubble ' + pinType + '">' +
+                  '<span class="pin-icon">' + icon + '</span>' +
+                '</div>' +
+              '</div>',
+        iconSize: [40, 40],
+        iconAnchor: [20, 36],
+        popupAnchor: [0, -36]
+      });
 
       var popupHtml =
-        '<div style="font-family:sans-serif;font-size:13px;line-height:1.4;">' +
-          '<strong style="color:#1d8045;font-size:14px;">🌱 ' + name + '</strong><br>' +
-          '<span style="color:#4a5568;">' + cat + '</span><br>' +
-          '<span style="color:#f59e0b;font-weight:bold;">★ ' + (emp.nota_media || 5.0) + '</span><br>' +
-          '<button style="margin-top:6px;padding:5px 12px;background:#0d2415;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;" onclick="selecionarEmpresaNoModal(\'' + name.replace(/'/g, "\\'") + '\')">Solicitar Coleta Aqui ♻️</button>' +
+        '<div class="map-popup-card">' +
+          '<div class="map-popup-header">' +
+            '<span class="map-popup-title">' + name + '</span>' +
+            '<span class="map-popup-badge">' + (emp.tipo === 'reee' ? 'Eletrônicos' : 'Ponto Exato') + '</span>' +
+          '</div>' +
+          '<div class="map-popup-bairro">📍 ' + enderecoCompleto + '</div>' +
+          '<div class="map-popup-stars">★★★★★ <span style="color:#2b3b30;font-weight:700;">' + nota + '</span> · <span style="color:var(--brand-green-hover);">' + cat + '</span></div>' +
+          '<button class="map-popup-btn" onclick="selecionarEmpresaNoModal(\'' + name.replace(/'/g, "\\'") + '\')">' +
+            'Solicitar Coleta Aqui ♻️' +
+          '</button>' +
         '</div>';
 
-      window.L.marker([lat, lng])
+      var marker = window.L.marker([lat, lng], { icon: customIcon })
         .addTo(mapInstance)
         .bindPopup(popupHtml);
+
+      markersMap[emp.id || name] = marker;
     });
+
+    renderMapSidebarList(points);
+  }
+
+  function renderMapSidebarList(points) {
+    var container = document.getElementById('map-points-list');
+    var countEl = document.getElementById('map-total-count');
+    if (countEl) countEl.textContent = points.length;
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    points.forEach(function (emp) {
+      var name = emp.razao_social || 'Ponto de Coleta';
+      var cat = emp.categoria || 'Reciclagem';
+      var enderecoCompleto = emp.endereco || ((emp.logradouro ? emp.logradouro + (emp.numero ? ', ' + emp.numero : '') + ' - ' : '') + (emp.bairro ? emp.bairro + ', ' : '') + (emp.cidade || 'Santos'));
+      var nota = parseFloat(emp.nota_media || 5.0).toFixed(1);
+      var icon = emp.icon || (cat.toLowerCase().includes('eletrônico') ? '💻' : (cat.toLowerCase().includes('metal') ? '🥫' : (cat.toLowerCase().includes('óleo') ? '🛢️' : '♻️')));
+      var key = emp.id || name;
+
+      var card = document.createElement('div');
+      card.className = 'map-point-card';
+      card.dataset.id = key;
+      card.onclick = function () {
+        focarPontoNoMapa(emp);
+      };
+
+      card.innerHTML =
+        '<h4><span>' + icon + '</span> ' + name + '</h4>' +
+        '<p>📍 ' + enderecoCompleto + '</p>' +
+        '<div class="map-point-card-meta">' +
+          '<span style="color:var(--brand-green-hover);font-weight:600;">' + cat + '</span>' +
+          '<span style="color:#f59e0b;font-weight:700;">★ ' + nota + '</span>' +
+        '</div>';
+
+      container.appendChild(card);
+    });
+  }
+
+  function focarPontoNoMapa(emp) {
+    if (!mapInstance) return;
+    var coords = getCoordsForEmpresa(emp);
+    var lat = coords.lat;
+    var lng = coords.lng;
+    var key = emp.id || emp.razao_social;
+
+    document.querySelectorAll('.map-point-card').forEach(function (c) {
+      c.classList.remove('active');
+    });
+    var activeCard = document.querySelector('.map-point-card[data-id="' + key + '"]');
+    if (activeCard) activeCard.classList.add('active');
+
+    mapInstance.flyTo([lat, lng], 16, {
+      animate: true,
+      duration: 1.2
+    });
+
+    var marker = markersMap[key];
+    if (marker) {
+      setTimeout(function () {
+        marker.openPopup();
+      }, 500);
+    }
+  }
+
+  function centralizarMapaEmSantos() {
+    if (!mapInstance) return;
+    mapInstance.flyTo([-23.9550, -46.3322], 13, {
+      animate: true,
+      duration: 1.0
+    });
+    window.toast('🎯 Mapa centralizado na cidade de Santos/SP.');
+  }
+
+  function filterMapPointsList() {
+    var searchInput = document.getElementById('search-map-points');
+    var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+    var points = (cachedEmpresas && cachedEmpresas.length > 0) ? cachedEmpresas : defaultSantosCompanies;
+    var filtered = points.filter(function (emp) {
+      var name = (emp.razao_social || '').toLowerCase();
+      var cat = (emp.categoria || '').toLowerCase();
+      var bairro = (emp.bairro || '').toLowerCase();
+      return name.includes(query) || cat.includes(query) || bairro.includes(query);
+    });
+
+    renderMapSidebarList(filtered);
   }
 
   function selecionarEmpresaNoModal(empresaNome) {
@@ -1619,6 +1800,9 @@
   window.buscarCEPReq = buscarCEPReq;
   window.buscarCEPPerfil = buscarCEPPerfil;
   window.initLeafletMap = initLeafletMap;
+  window.centralizarMapaEmSantos = centralizarMapaEmSantos;
+  window.focarPontoNoMapa = focarPontoNoMapa;
+  window.filterMapPointsList = filterMapPointsList;
   window.selecionarEmpresaNoModal = selecionarEmpresaNoModal;
   window.renderizarHistoricoAtividades = renderizarHistoricoAtividades;
   window.openEvalModal = openEvalModal;
