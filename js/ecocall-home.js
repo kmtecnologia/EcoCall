@@ -21,12 +21,28 @@
     window.toast('📍 ' + city + ' selecionada');
   }
 
-  function filt(btn) {
+  function filt(btn, tag) {
     document.querySelectorAll('.fbtn').forEach(function (b) {
       b.classList.remove('on');
     });
     btn.classList.add('on');
-    window.toast('Filtrando: ' + btn.textContent);
+
+    var category = tag || (btn.textContent || '').toLowerCase().replace(/[^a-z]/g, '');
+    var cards = document.querySelectorAll('.ecard');
+    var count = 0;
+
+    cards.forEach(function (card) {
+      var tags = (card.getAttribute('data-tags') || '').toLowerCase();
+      if (!category || category === 'todos' || tags.indexOf(category) !== -1) {
+        card.style.display = 'flex';
+        card.style.animation = 'fadeIn 0.35s ease forwards';
+        count++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    window.toast('🌿 ' + count + ' ' + (count === 1 ? 'coletor encontrado' : 'coletores encontrados') + ' para ' + btn.textContent.trim());
   }
 
   function irParaMapa()    { window.showLoader('mapa.html'); }
