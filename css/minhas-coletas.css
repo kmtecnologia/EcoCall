@@ -922,23 +922,53 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: 100%;
+  min-height: 0;
   border-right: 1px solid var(--border-light);
   background: #fafcfb;
+  overflow: hidden;
 }
 
 .map-sidebar-top {
   padding: 1.1rem 1.2rem;
   border-bottom: 1px solid var(--border-light);
   background: #ffffff;
+  flex-shrink: 0;
 }
 
 .map-points-list {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  max-height: calc(600px - 75px);
+  overflow-y: scroll;
+  overflow-x: hidden;
   padding: 0.9rem;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  scrollbar-width: thin;
+  scrollbar-color: #22c55e #f1f5f9;
+}
+
+/* Barra de rolagem customizada e visível para Chrome, Edge, Opera e Safari */
+.map-points-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.map-points-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+  margin: 6px 0;
+}
+
+.map-points-list::-webkit-scrollbar-thumb {
+  background: #22c55e;
+  border-radius: 8px;
+  border: 1.5px solid #ffffff;
+}
+
+.map-points-list::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
 }
 
 .map-point-card {

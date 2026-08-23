@@ -530,6 +530,35 @@
 }
 
 /* ==========================================================================
+   BARRA DE ROLAGEM VISÍVEL DA LISTA DE EMPRESAS NO MAPA
+   ========================================================================== */
+.map-points-list {
+  scrollbar-width: thin;
+  scrollbar-color: #22c55e #f1f5f9;
+}
+
+.map-points-list::-webkit-scrollbar {
+  width: 8px;
+  display: block;
+}
+
+.map-points-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+  margin: 6px 0;
+}
+
+.map-points-list::-webkit-scrollbar-thumb {
+  background: #22c55e;
+  border-radius: 8px;
+  border: 1.5px solid #ffffff;
+}
+
+.map-points-list::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
+}
+
+/* ==========================================================================
    I. MODAL & FOLHA DO COMPROVANTE DIGITAL OFICIAL (VISUALIZAÇÃO & IMPRESSÃO)
    ========================================================================== */
 .comprovante-overlay {

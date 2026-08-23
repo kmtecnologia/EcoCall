@@ -168,6 +168,8 @@ if ($totalEmpresas === 0) {
 
 // Atualização de coordenadas exatas caso os registros existentes ainda não as possuam
 $coordUpdates = [
+    'Santista Ambiental Ltda'                   => ['lat' => -23.933200, 'lng' => -46.328900],
+    'Recicla Baixada S/A'                       => ['lat' => -23.962500, 'lng' => -46.324200],
     'Terra Santos Ambiental (Consórcio Público)' => ['lat' => -23.955400, 'lng' => -46.321850],
     'ONG Sem Fronteiras (Cooperativa)'           => ['lat' => -23.932820, 'lng' => -46.324150],
     'Comares (Cooperativa de Materiais Recicláveis)' => ['lat' => -23.923810, 'lng' => -46.368420],
