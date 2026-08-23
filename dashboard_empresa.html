@@ -22,6 +22,9 @@
 
   <div class="dash-layout">
 
+    <!-- Overlay para fechar gaveta mobile no toque fora -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
     <!-- ─── SIDEBAR LATERAL NATIVA ─── -->
     <aside class="sidebar">
       <a href="javascript:void(0)" class="logo" onclick="switchEmpresaTab('dash')">
@@ -80,9 +83,14 @@
       
       <!-- TOPBAR DINÂMICA -->
       <header class="topbar">
-        <div class="topbar-welcome">
-          <h1 id="emp-topbar-title">Painel da Empresa 🏢</h1>
-          <p id="emp-topbar-sub">Gerencie requisições e controle a operação de coleta na sua região.</p>
+        <div style="display:flex;align-items:center;gap:0.85rem;">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleMobileSidebar()" aria-label="Abrir Menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="topbar-welcome">
+            <h1 id="emp-topbar-title">Painel da Empresa 🏢</h1>
+            <p id="emp-topbar-sub">Gerencie requisições e controle a operação de coleta na sua região.</p>
+          </div>
         </div>
         
         <div class="topbar-right">
@@ -183,21 +191,23 @@
           <div class="lower-split-grid">
             
             <div class="panel-card-box">
-              <div class="section-heading">
-                <h2>Coletas da Empresa</h2>
+              <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;">
+                <h2 style="margin:0;">Coletas da Empresa</h2>
+                <span class="sub-heading-badge" style="font-size:0.75rem;background:#f0fdf4;color:#15803d;padding:3px 10px;border-radius:50px;border:1px solid #bbf7d0;font-weight:700;">Últimos 6 meses</span>
               </div>
               
               <div class="chart-container-mini">
                 <div class="chart-bars-wrap" id="emp-dash-chart-bars">
-                  <div class="chart-bar bar-past" style="height:40%;" title="Nov: 40%"></div>
-                  <div class="chart-bar bar-past" style="height:55%;" title="Dez: 55%"></div>
-                  <div class="chart-bar bar-past" style="height:48%;" title="Jan: 48%"></div>
-                  <div class="chart-bar bar-past" style="height:70%;" title="Fev: 70%"></div>
-                  <div class="chart-bar bar-past" style="height:60%;" title="Mar: 60%"></div>
-                  <div class="chart-bar bar-current" style="height:88%;" title="Atual: 88%"></div>
+                  <!-- Barras calculadas e preenchidas via JS dinamicamente -->
+                  <div class="chart-bar bar-past" style="height:35%;" data-val="3 coletas" title="3 coletas"></div>
+                  <div class="chart-bar bar-past" style="height:50%;" data-val="5 coletas" title="5 coletas"></div>
+                  <div class="chart-bar bar-past" style="height:40%;" data-val="4 coletas" title="4 coletas"></div>
+                  <div class="chart-bar bar-past" style="height:65%;" data-val="7 coletas" title="7 coletas"></div>
+                  <div class="chart-bar bar-past" style="height:55%;" data-val="6 coletas" title="6 coletas"></div>
+                  <div class="chart-bar bar-current" style="height:85%;" data-val="9 coletas" title="9 coletas"></div>
                 </div>
                 <div class="chart-months-labels" id="emp-dash-chart-labels">
-                  <span>Nov</span><span>Dez</span><span>Jan</span><span>Fev</span><span>Mar</span><span>Atual</span>
+                  <span>Nov</span><span>Dez</span><span>Jan</span><span>Fev</span><span>Mar</span><span style="color:#15803d;font-weight:800;">Atual</span>
                 </div>
               </div>
             </div>
@@ -222,11 +232,11 @@
                 </div>
                 <div class="status-list-item">
                   <span class="status-item-name">Área de Atendimento</span>
-                  <span class="badge badge-done">✓ Baixada Santista</span>
+                  <span class="badge badge-done">✓ Santos (Exclusivo)</span>
                 </div>
                 <div class="status-list-item">
-                  <span class="status-item-name">Emissão de Comprovantes PDF</span>
-                  <span class="badge badge-done">✓ FPDF Ativo</span>
+                  <span class="status-item-name">Emissão de Comprovantes</span>
+                  <span class="badge badge-done">✓ Digital Ativo</span>
                 </div>
               </div>
             </div>

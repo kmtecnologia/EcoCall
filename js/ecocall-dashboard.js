@@ -12,8 +12,14 @@
   var cachedColetas = [];
   var cachedEmpresas = [];
   var mapInstance = null;
+  var markersMap = {};
   var currentEvalRating = 5;
   var empresasMateriaisMap = {};
+
+  var escapeHtml = window.escapeHtml || function (s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  };
 
   var todosMateriais = [
     { name: 'Plástico', icon: '♻️' },
@@ -46,6 +52,10 @@
      ========================================================================== */
   function switchUserTab(tabName, el) {
     if (!tabName) tabName = 'dash';
+
+    if (window.toggleMobileSidebar) {
+      window.toggleMobileSidebar(false);
+    }
 
     var navItems = document.querySelectorAll('.sidebar-menu .nav-item');
     navItems.forEach(function (item) {
@@ -227,7 +237,7 @@
     coletas.slice(0, 5).forEach(function (c) {
       var tr = document.createElement('tr');
       var companyName = c.empresa_nome || 'EcoColeta Santos';
-      var letter = companyName.charAt(0).toUpperCase();
+      var letter = escapeHtml(companyName.charAt(0).toUpperCase());
       var rawDate = c.data_agendada || '';
       var parts = rawDate.split('-');
       var dateFmt = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
@@ -236,18 +246,18 @@
 
       var btnHtml = '<button class="btn-card-action" onclick="switchUserTab(\'coletas\')">Detalhes</button>';
       if (c.status === 'concluido') {
-        btnHtml = '<button class="btn-card-action primary" onclick="imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
+        btnHtml = '<button class="btn-card-action primary" onclick="abrirComprovanteDigital(\'' + escapeHtml(orderId) + '\')">📄 Comprovante</button>';
       }
 
       tr.innerHTML =
         '<td>' +
           '<div class="table-comp-info">' +
             '<div class="comp-letter text-green-bg">' + letter + '</div>' +
-            '<div><strong>' + companyName + '</strong><div style="font-size:0.75rem;color:var(--text-grey);">' + orderId + '</div></div>' +
+            '<div><strong>' + escapeHtml(companyName) + '</strong><div style="font-size:0.75rem;color:var(--text-grey);">' + escapeHtml(orderId) + '</div></div>' +
           '</div>' +
         '</td>' +
-        '<td><span class="etag tag-plastic">' + (c.tipo_residuo || 'Resíduos Recicláveis') + '</span></td>' +
-        '<td>' + dateFmt + '</td>' +
+        '<td><span class="etag tag-plastic">' + escapeHtml(c.tipo_residuo || 'Resíduos Recicláveis') + '</span></td>' +
+        '<td>' + escapeHtml(dateFmt) + '</td>' +
         '<td><span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span></td>' +
         '<td>' + btnHtml + '</td>';
 
@@ -403,7 +413,7 @@
 
     coletas.forEach(function (c) {
       var companyName = c.empresa_nome || 'EcoColeta Santos';
-      var letter = companyName.charAt(0).toUpperCase();
+      var letter = escapeHtml(companyName.charAt(0).toUpperCase());
       var orderId = c.protocolo || ('COL-' + strPad(c.id, 6));
       var rawDate = c.data_agendada || '';
       var parts = rawDate.split('-');
@@ -415,14 +425,18 @@
       var tiposText = c.tipo_residuo || 'Recicláveis';
 
       var tags = tiposText.split(',').map(function (t) {
-        return '<span class="etag tag-plastic">' + t.trim() + '</span>';
+        return '<span class="etag tag-plastic">' + escapeHtml(t.trim()) + '</span>';
       }).join(' ');
 
       // Ações dos Cards
       var actionsCardHtml = '';
-      actionsCardHtml += '<button class="btn-card-action primary" onclick="event.stopPropagation();imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
+      actionsCardHtml += '<button class="btn-card-action primary" onclick="event.stopPropagation();abrirComprovanteDigital(\'' + escapeHtml(orderId) + '\')">📄 Comprovante</button>';
       if (c.status === 'concluido') {
-        actionsCardHtml += '<button class="btn-card-action" style="margin-left:4px;background:#fef3c7;color:#b45309;border-color:#fde68a;" onclick="event.stopPropagation();openEvalModal(' + c.id + ', \'' + companyName.replace(/'/g, "\\'") + '\')">⭐ Avaliar</button>';
+        if (c.avaliacao_id || c.avaliacao_nota) {
+          actionsCardHtml += '<span class="btn-card-action" style="margin-left:4px;background:#ecfdf5;color:#15803d;border-color:#bbf7d0;font-size:0.75rem;cursor:default;">✓ Avaliado ★ ' + (c.avaliacao_nota || 5) + '</span>';
+        } else {
+          actionsCardHtml += '<button class="btn-card-action" style="margin-left:4px;background:#fef3c7;color:#b45309;border-color:#fde68a;font-weight:700;" onclick="event.stopPropagation();openEvalModal(' + c.id + ', \'' + escapeHtml(companyName).replace(/'/g, "\\'") + '\')">⭐ Avaliar (+10 pts)</button>';
+        }
       } else if (c.status === 'pendente' || c.status === 'agendado') {
         actionsCardHtml += '<button class="btn-card-action" style="margin-left:4px;color:#b53b3b;border-color:#f0ccc8;" onclick="event.stopPropagation();cancelarMinhaColeta(' + c.id + ')">✕</button>';
       }
@@ -436,11 +450,11 @@
         card.innerHTML =
           '<div class="coleta-avatar av-green">' + letter + '</div>' +
           '<div class="coleta-info">' +
-            '<div class="coleta-company">' + companyName + '</div>' +
+            '<div class="coleta-company">' + escapeHtml(companyName) + '</div>' +
             '<div class="coleta-tags">' + tags + '</div>' +
           '</div>' +
-          '<div class="coleta-date"><div class="date-day">' + dayNum + '</div><div class="date-month">' + monthName + '</div></div>' +
-          '<div class="coleta-weight"><div class="weight-val">' + weight + ' kg</div><div class="weight-lbl">Estimado</div></div>' +
+          '<div class="coleta-date"><div class="date-day">' + escapeHtml(dayNum) + '</div><div class="date-month">' + escapeHtml(monthName) + '</div></div>' +
+          '<div class="coleta-weight"><div class="weight-val">' + escapeHtml(weight) + ' kg</div><div class="weight-lbl">Estimado</div></div>' +
           '<div class="coleta-right">' +
             '<span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span>' +
             '<div style="display:flex;align-items:center;">' + actionsCardHtml + '</div>' +
@@ -454,10 +468,14 @@
         var tr = document.createElement('tr');
         var actionsTableHtml = '<div style="display:flex;gap:0.4rem;align-items:center;">';
         actionsTableHtml += '<button class="btn-card-action" title="Ver detalhes" onclick="openDetailModal(' + c.id + ')">👁️ Detalhes</button>';
-        actionsTableHtml += '<button class="btn-card-action primary" title="Imprimir PDF" onclick="imprimirComprovantePDF(\'' + orderId + '\')">📄 PDF</button>';
+        actionsTableHtml += '<button class="btn-card-action primary" title="Ver Comprovante Oficial" onclick="abrirComprovanteDigital(\'' + escapeHtml(orderId) + '\')">📄 Comprovante</button>';
 
         if (c.status === 'concluido') {
-          actionsTableHtml += '<button class="btn-card-action" style="background:#fef3c7;color:#b45309;border-color:#fde68a;" onclick="openEvalModal(' + c.id + ', \'' + companyName.replace(/'/g, "\\'") + '\')">⭐ Avaliar</button>';
+          if (c.avaliacao_id || c.avaliacao_nota) {
+            actionsTableHtml += '<span class="btn-card-action" style="background:#ecfdf5;color:#15803d;border-color:#bbf7d0;font-size:0.75rem;cursor:default;">✓ Avaliado ★ ' + (c.avaliacao_nota || 5) + '</span>';
+          } else {
+            actionsTableHtml += '<button class="btn-card-action" style="background:#fef3c7;color:#b45309;border-color:#fde68a;font-weight:700;" onclick="openEvalModal(' + c.id + ', \'' + escapeHtml(companyName).replace(/'/g, "\\'") + '\')">⭐ Avaliar (+10 pts)</button>';
+          }
         } else if (c.status === 'pendente' || c.status === 'agendado') {
           actionsTableHtml += '<button class="btn-card-action" style="color:#b53b3b;border-color:#f0ccc8;" onclick="cancelarMinhaColeta(' + c.id + ')">✕</button>';
         }
@@ -467,12 +485,12 @@
           '<td>' +
             '<div class="table-comp-info">' +
               '<div class="comp-letter text-green-bg">' + letter + '</div>' +
-              '<div><strong>' + companyName + '</strong><div style="font-size:0.75rem;color:var(--text-grey);">' + orderId + '</div></div>' +
+              '<div><strong>' + escapeHtml(companyName) + '</strong><div style="font-size:0.75rem;color:var(--text-grey);">' + escapeHtml(orderId) + '</div></div>' +
             '</div>' +
           '</td>' +
-          '<td><span class="etag tag-plastic">' + tiposText + '</span></td>' +
-          '<td>' + dateFmt + '</td>' +
-          '<td><strong>' + weight + ' kg</strong></td>' +
+          '<td><span class="etag tag-plastic">' + escapeHtml(tiposText) + '</span></td>' +
+          '<td>' + escapeHtml(dateFmt) + '</td>' +
+          '<td><strong>' + escapeHtml(weight) + ' kg</strong></td>' +
           '<td><span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span></td>' +
           '<td>' + actionsTableHtml + '</td>';
 
@@ -621,9 +639,13 @@
 
     var actContainer = document.getElementById('dp-actions');
     if (actContainer) {
-      var html = '<button class="btn-detail-primary" onclick="imprimirComprovantePDF(\'' + orderId + '\')">📄 Imprimir PDF Oficial</button>';
+      var html = '<button class="btn-detail-primary" onclick="abrirComprovanteDigital(\'' + orderId + '\')">📄 Ver Comprovante Oficial</button>';
       if (coleta.status === 'concluido') {
-        html += '<button class="btn-detail-secondary" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;" onclick="openEvalModal(' + coleta.id + ', \'' + company.replace(/'/g, "\\'") + '\')">⭐ Avaliar Atendimento (+10 pts)</button>';
+        if (coleta.avaliacao_id || coleta.avaliacao_nota) {
+          html += '<div style="background:#ecfdf5;color:#15803d;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;font-size:0.82rem;font-weight:700;text-align:center;margin-top:0.4rem;">✓ Atendimento Avaliado com Nota ' + (coleta.avaliacao_nota || 5.0) + ' ★</div>';
+        } else {
+          html += '<button class="btn-detail-secondary" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;" onclick="openEvalModal(' + coleta.id + ', \'' + company.replace(/'/g, "\\'") + '\')">⭐ Avaliar Atendimento (+10 pts)</button>';
+        }
       } else if (coleta.status === 'pendente' || coleta.status === 'agendado') {
         html += '<button class="btn-detail-secondary" onclick="cancelarMinhaColeta(' + coleta.id + ')">✕ Cancelar Solicitação</button>';
       }
@@ -933,6 +955,17 @@
   /* ==========================================================================
      9. MODAL DE AVALIAÇÃO DE COLETAS CONCLUÍDAS
      ========================================================================== */
+  var currentEvalRating = 5;
+  var previewEvalRating = null;
+
+  var ratingLabels = {
+    1: '1 estrela (Muito Ruim 😞)',
+    2: '2 estrelas (Ruim 🙁)',
+    3: '3 estrelas (Regular 😐)',
+    4: '4 estrelas (Bom 🙂)',
+    5: '5 estrelas (Excelente! 🌟)'
+  };
+
   function openEvalModal(coletaId, empresaNome) {
     var overlay = document.getElementById('eval-overlay');
     var modal = document.getElementById('eval-modal');
@@ -940,7 +973,7 @@
     var idInput = document.getElementById('eval-coleta-id');
     var commentInput = document.getElementById('eval-comment');
 
-    if (empNameEl) empNameEl.textContent = 'Empresa: ' + (empresaNome || 'Parceira de Coleta');
+    if (empNameEl) empNameEl.textContent = 'Empresa: ' + (empresaNome || 'Parceira de Coleta em Santos');
     if (idInput) idInput.value = coletaId;
     if (commentInput) commentInput.value = '';
 
@@ -959,29 +992,49 @@
 
   function setRating(val) {
     currentEvalRating = val;
+    previewEvalRating = null;
+    atualizarEstrelasDOM(val);
+  }
+
+  function previewRating(val) {
+    previewEvalRating = val;
+    atualizarEstrelasDOM(val);
+  }
+
+  function restoreRating() {
+    previewEvalRating = null;
+    atualizarEstrelasDOM(currentEvalRating);
+  }
+
+  function atualizarEstrelasDOM(val) {
     var container = document.getElementById('eval-stars-picker');
     var lbl = document.getElementById('eval-rating-lbl');
 
-    var labels = {
-      1: '1 estrela (Muito Ruim)',
-      2: '2 estrelas (Ruim)',
-      3: '3 estrelas (Regular)',
-      4: '4 estrelas (Bom)',
-      5: '5 estrelas (Excelente)'
-    };
-
-    if (lbl) lbl.textContent = labels[val] || (val + ' estrelas');
+    if (lbl) lbl.textContent = ratingLabels[val] || (val + ' estrelas');
 
     if (container) {
       var spans = container.querySelectorAll('span');
       spans.forEach(function (span, idx) {
         if (idx < val) {
           span.style.color = '#f59e0b';
+          span.style.transform = idx === val - 1 ? 'scale(1.2)' : 'scale(1)';
         } else {
           span.style.color = '#d1d5db';
+          span.style.transform = 'scale(1)';
         }
+        span.style.display = 'inline-block';
+        span.style.transition = 'all 0.15s ease';
       });
     }
+  }
+
+  function adicionarElogioAoComentario(texto) {
+    var commentInput = document.getElementById('eval-comment');
+    if (!commentInput) return;
+    var atual = commentInput.value.trim();
+    if (atual.indexOf(texto) !== -1) return;
+    commentInput.value = atual ? (atual + ' · ' + texto) : texto;
+    window.toast('✓ Elogio adicionado ao feedback!', 'info', 1500);
   }
 
   function submitEvaluation() {
@@ -991,7 +1044,7 @@
     var comment = commentInput ? commentInput.value.trim() : '';
 
     if (coletaId <= 0) {
-      window.toast('⚠ Coleta inválida para avaliação.');
+      window.toast('⚠ Coleta inválida para avaliação.', 'warning');
       return;
     }
 
@@ -1006,16 +1059,27 @@
       }
     }).then(function (res) {
       if (res && res.success) {
-        window.toast('🎉 ' + (res.message || 'Avaliação registrada! Você ganhou +10 pontos.'));
+        window.toast('🎉 Avaliação enviada com sucesso! Você ganhou +10 Ecopontos!', 'success', 4500);
         closeEvalModal();
+
+        // Atualiza a coleta no cache local
+        if (Array.isArray(cachedColetas)) {
+          var target = cachedColetas.find(function (c) { return c.id === coletaId; });
+          if (target) {
+            target.avaliacao_id = res.avaliacao_id || 1;
+            target.avaliacao_nota = currentEvalRating;
+            target.avaliacao_comentario = comment;
+          }
+        }
+
         if (window.syncUserProfile) window.syncUserProfile();
         carregarPainelUsuario();
       } else {
-        window.toast('⚠ ' + (res.error || 'Não foi possível enviar a avaliação.'));
+        window.toast('⚠ ' + (res.error || 'Não foi possível enviar a avaliação.'), 'warning');
       }
     }).catch(function (err) {
       console.error('Erro no envio de avaliação:', err);
-      window.toast('⚠ Falha na comunicação com o servidor.');
+      window.toast('⚠ Falha na comunicação com o servidor.', 'error');
     });
   }
 

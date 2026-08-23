@@ -13,11 +13,20 @@
   var calCurrentDate = new Date();
   var calSelectedDateStr = '';
 
+  var escapeHtml = window.escapeHtml || function (s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  };
+
   /* ==========================================================================
      1. CONTROLE DE NAVEGAÇÃO POR ABAS CORPORATIVAS (SPA)
      ========================================================================== */
   function switchEmpresaTab(tabName, el) {
     if (!tabName) tabName = 'dash';
+
+    if (window.toggleMobileSidebar) {
+      window.toggleMobileSidebar(false);
+    }
 
     var navItems = document.querySelectorAll('.sidebar-menu .nav-item');
     navItems.forEach(function (item) {
@@ -135,12 +144,68 @@
       if (res && res.success && Array.isArray(res.coletas)) {
         cachedColetas = res.coletas;
         renderizarTabelaDash(res.coletas);
+        renderizarMiniGraficoDash(res.coletas);
         renderizarTabelaPedidos(res.coletas);
         renderizarCalendario(res.coletas);
         renderizarGraficosRelatorio(res.coletas);
       }
     }).catch(function (err) {
       console.warn('Erro ao carregar coletas da empresa:', err);
+    });
+  }
+
+  function renderizarMiniGraficoDash(coletas) {
+    var barsWrap = document.getElementById('emp-dash-chart-bars');
+    var labelsWrap = document.getElementById('emp-dash-chart-labels');
+    if (!barsWrap || !labelsWrap) return;
+
+    var mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var hoje = new Date();
+    var ultimos6 = [];
+
+    for (var i = 5; i >= 0; i--) {
+      var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      ultimos6.push({
+        ano: d.getFullYear(),
+        mes: d.getMonth(),
+        label: i === 0 ? 'Atual' : mesesNomes[d.getMonth()],
+        total: 0
+      });
+    }
+
+    (coletas || []).forEach(function (c) {
+      var rawDate = c.data_agendada;
+      if (rawDate) {
+        var cDate = new Date(rawDate + 'T00:00:00');
+        ultimos6.forEach(function (mObj) {
+          if (cDate.getFullYear() === mObj.ano && cDate.getMonth() === mObj.mes) {
+            mObj.total++;
+          }
+        });
+      }
+    });
+
+    var maxVal = Math.max.apply(null, ultimos6.map(function(m){return m.total;})) || 1;
+
+    barsWrap.innerHTML = '';
+    labelsWrap.innerHTML = '';
+
+    ultimos6.forEach(function (m, idx) {
+      var isCurrent = idx === ultimos6.length - 1;
+      var pct = Math.max(18, Math.round((m.total / maxVal) * 90));
+      if (m.total === 0) pct = 15;
+
+      var bar = document.createElement('div');
+      bar.className = 'chart-bar ' + (isCurrent ? 'bar-current' : 'bar-past');
+      bar.style.height = pct + '%';
+      bar.setAttribute('data-val', m.total + (m.total === 1 ? ' coleta' : ' coletas'));
+      bar.title = m.label + ': ' + m.total + ' coletas';
+      barsWrap.appendChild(bar);
+
+      var span = document.createElement('span');
+      span.textContent = m.label;
+      if (isCurrent) span.style.color = '#15803d';
+      labelsWrap.appendChild(span);
     });
   }
 
@@ -171,7 +236,7 @@
     pendentesOuNovos.slice(0, 5).forEach(function (c) {
       var tr = document.createElement('tr');
       var clientName = c.cliente_nome || 'Cidadão Solicitante';
-      var initials = clientName.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() || 'CC';
+      var initials = escapeHtml(clientName.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() || 'CC');
       var stInfo = statusMap[c.status] || statusMap['pendente'];
 
       var rawDate = c.data_agendada || '';
@@ -179,30 +244,34 @@
       var dateFmt = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : rawDate;
 
       var tags = (c.tipo_residuo || 'Geral').split(',').map(function (t) {
-        return '<span class="etag tag-plastic">' + t.trim() + '</span>';
+        return '<span class="etag tag-plastic">' + escapeHtml(t.trim()) + '</span>';
       }).join(' ');
 
       var actionsHtml = '';
       if (c.status === 'pendente') {
         actionsHtml =
-          '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'agendado\')">Aceitar</button> ' +
-          '<button class="btn-table-action btn-danger" onclick="atualizarStatusPedido(' + c.id + ', \'cancelado\')">Recusar</button>';
+          '<div style="display:flex;gap:0.4rem;align-items:center;">' +
+            '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'agendado\')">Aceitar</button>' +
+            '<button class="btn-table-action btn-danger" onclick="atualizarStatusPedido(' + c.id + ', \'cancelado\')">Recusar</button>' +
+          '</div>';
       } else {
         actionsHtml =
-          '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'concluido\')">Concluir</button> ' +
-          '<button class="btn-table-details" onclick="imprimirComprovantePDF(\'' + (c.protocolo || c.id) + '\')">PDF</button>';
+          '<div style="display:flex;gap:0.4rem;align-items:center;">' +
+            (c.status === 'agendado' ? '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'concluido\')">✓ Concluir</button>' : '') +
+            '<button class="btn-card-action primary" onclick="abrirComprovanteDigital(\'' + escapeHtml(c.protocolo || c.id) + '\')">📄 Comprovante</button>' +
+          '</div>';
       }
 
       tr.innerHTML =
         '<td>' +
           '<div class="table-comp-info">' +
             '<div class="comp-letter text-green-bg">' + initials + '</div>' +
-            '<span>' + clientName + '</span>' +
+            '<span>' + escapeHtml(clientName) + '</span>' +
           '</div>' +
         '</td>' +
         '<td>' + tags + '</td>' +
-        '<td>' + (c.endereco_coleta || 'Santos, SP') + '</td>' +
-        '<td>' + dateFmt + ' (' + (c.turno || 'Manhã') + ')</td>' +
+        '<td>' + escapeHtml(c.endereco_coleta || 'Santos, SP') + '</td>' +
+        '<td>' + escapeHtml(dateFmt) + ' (' + escapeHtml(c.turno || 'Manhã') + ')</td>' +
         '<td><span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span></td>' +
         '<td>' + actionsHtml + '</td>';
 
@@ -265,7 +334,7 @@
       var filterKey = statusFilterKeyMap[c.status] || 'novo';
       var stInfo = statusBadgeMap[c.status] || statusBadgeMap['pendente'];
       var clientName = c.cliente_nome || 'Cidadão Solicitante';
-      var initials = clientName.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() || 'CC';
+      var initials = escapeHtml(clientName.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() || 'CC');
       var proto = c.protocolo || ('COL-' + c.id);
 
       var rawDate = c.data_agendada || '';
@@ -274,24 +343,25 @@
       var peso = (parseFloat(c.peso_estimado_kg) || 1.0).toFixed(1) + ' kg';
 
       var tags = (c.tipo_residuo || 'Geral').split(',').map(function (t) {
-        return '<span class="etag tag-plastic">' + t.trim() + '</span>';
+        return '<span class="etag tag-plastic">' + escapeHtml(t.trim()) + '</span>';
       }).join(' ');
 
-      var actionsHtml = '';
+      var actionsHtml = '<div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">';
       if (c.status === 'pendente') {
-        actionsHtml =
-          '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'agendado\')">Aceitar</button> ' +
+        actionsHtml +=
+          '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'agendado\')">Aceitar</button>' +
           '<button class="btn-table-action btn-danger" onclick="atualizarStatusPedido(' + c.id + ', \'cancelado\')">Recusar</button>';
       } else if (c.status === 'agendado') {
-        actionsHtml =
-          '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'concluido\')">✓ Concluir</button> ' +
-          '<button class="btn-table-details" onclick="imprimirComprovantePDF(\'' + proto + '\')">📄 PDF</button> ' +
-          '<button class="btn-table-action btn-danger" onclick="atualizarStatusPedido(' + c.id + ', \'cancelado\')">✕</button>';
+        actionsHtml +=
+          '<button class="btn-table-action btn-success" onclick="atualizarStatusPedido(' + c.id + ', \'concluido\')">✓ Concluir</button>' +
+          '<button class="btn-card-action primary" onclick="abrirComprovanteDigital(\'' + escapeHtml(proto) + '\')">📄 Comprovante</button>' +
+          '<button class="btn-table-action btn-danger" title="Cancelar Coleta" onclick="atualizarStatusPedido(' + c.id + ', \'cancelado\')">✕</button>';
       } else if (c.status === 'concluido') {
-        actionsHtml = '<button class="btn-table-details" onclick="imprimirComprovantePDF(\'' + proto + '\')">📄 Comprovante</button>';
+        actionsHtml += '<button class="btn-card-action primary" onclick="abrirComprovanteDigital(\'' + escapeHtml(proto) + '\')">📄 Comprovante</button>';
       } else {
-        actionsHtml = '<span style="font-size:0.8rem;color:var(--text-grey);">Cancelado</span>';
+        actionsHtml += '<span style="font-size:0.8rem;color:var(--text-grey);">Cancelado</span>';
       }
+      actionsHtml += '</div>';
 
       var tr = document.createElement('tr');
       tr.dataset.status = filterKey;
@@ -300,15 +370,15 @@
           '<div class="table-comp-info">' +
             '<div class="comp-letter text-green-bg">' + initials + '</div>' +
             '<div>' +
-              '<div style="font-weight:600;">' + clientName + '</div>' +
-              '<div style="font-size:0.75rem;color:var(--text-grey);font-family:monospace;">' + proto + '</div>' +
+              '<div style="font-weight:600;">' + escapeHtml(clientName) + '</div>' +
+              '<div style="font-size:0.75rem;color:var(--text-grey);font-family:monospace;">' + escapeHtml(proto) + '</div>' +
             '</div>' +
           '</div>' +
         '</td>' +
         '<td>' + tags + '</td>' +
-        '<td><div style="max-width:220px;font-size:0.84rem;line-height:1.2;">' + (c.endereco_coleta || 'Santos, SP') + '</div></td>' +
-        '<td>' + dateFmt + '<br><small style="color:var(--text-grey);">' + (c.turno || 'Manhã') + '</small></td>' +
-        '<td><strong>' + peso + '</strong></td>' +
+        '<td><div style="max-width:220px;font-size:0.84rem;line-height:1.2;">' + escapeHtml(c.endereco_coleta || 'Santos, SP') + '</div></td>' +
+        '<td>' + escapeHtml(dateFmt) + '<br><small style="color:var(--text-grey);">' + escapeHtml(c.turno || 'Manhã') + '</small></td>' +
+        '<td><strong>' + escapeHtml(peso) + '</strong></td>' +
         '<td><span class="badge ' + stInfo.badgeCls + '">' + stInfo.label + '</span></td>' +
         '<td>' + actionsHtml + '</td>';
 
@@ -664,7 +734,7 @@
       item.dataset.rating = av.nota;
 
       var name = av.cliente_nome || 'Cliente Cidadão';
-      var initials = name.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() || 'CC';
+      var initials = escapeHtml(name.split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase() || 'CC');
       var cidade = (av.cliente_cidade || 'Santos') + (av.cliente_uf ? ', ' + av.cliente_uf : '');
       var dateStr = av.created_at ? new Date(av.created_at).toLocaleDateString('pt-BR') : '';
 
@@ -674,13 +744,13 @@
         '<div class="rev-head">' +
           '<div class="rev-avatar">' + initials + '</div>' +
           '<div>' +
-            '<div class="rev-name">' + name + '</div>' +
-            '<div class="rev-date">' + dateStr + ' · ' + cidade + '</div>' +
+            '<div class="rev-name">' + escapeHtml(name) + '</div>' +
+            '<div class="rev-date">' + escapeHtml(dateStr) + ' · ' + escapeHtml(cidade) + '</div>' +
           '</div>' +
           '<div class="rev-stars">' + stars + '</div>' +
         '</div>' +
-        '<div class="rev-text">' + (av.comentario || 'Coleta realizada com sucesso e materiais entregues de acordo com o agendado.') + '</div>' +
-        '<button class="btn-reply" onclick="toast(\'Obrigado pelo retorno! Resposta enviada ao cliente.\')">Agradecer</button>';
+        '<div class="rev-text">' + escapeHtml(av.comentario || 'Coleta realizada com sucesso e materiais entregues de acordo com o agendado.') + '</div>' +
+        '<button class="btn-reply" onclick="toast(\'Obrigado pelo retorno! Resposta enviada ao cliente.\', \'success\')">Agradecer</button>';
 
       listEl.appendChild(item);
     });

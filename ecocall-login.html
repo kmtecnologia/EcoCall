@@ -34,15 +34,24 @@
 
     <!-- ─── PAINEL ESQUERDO — BOAS-VINDAS ─── -->
     <div class="left-panel">
-      <a href="javascript:void(0)" onclick="irParaHome()" class="logo">
-        <div class="logo-icon">
-          <img src="img/logo-folha.png" alt="EcoCall" width="40" height="40">
-        </div>
-        <div>
-          <div class="logo-text">EcoCall</div>
-          <div class="logo-sub">Resíduos coletados, mundo preservado</div>
-        </div>
-      </a>
+      <div class="left-header">
+        <a href="javascript:void(0)" onclick="irParaHome()" class="logo" title="EcoCall — Início">
+          <div class="logo-icon">
+            <img src="img/logo-folha.png" alt="EcoCall" width="40" height="40">
+          </div>
+          <div>
+            <div class="logo-text">EcoCall</div>
+            <div class="logo-sub">Resíduos coletados, mundo preservado</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" onclick="irParaHome()" class="login-back-btn" title="Voltar para a página inicial">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Voltar ao Início</span>
+        </a>
+      </div>
 
       <div class="welcome-card">
         <div class="avatar-wrap">
@@ -101,6 +110,21 @@
 
     <!-- ─── PAINEL DIREITO — FORMULÁRIO DE LOGIN ─── -->
     <div class="right-panel">
+      <!-- Barra Mobile para Retorno Rápido -->
+      <div class="mobile-login-bar">
+        <a href="javascript:void(0)" onclick="irParaHome()" class="mobile-login-logo">
+          <img src="img/logo-folha.png" alt="EcoCall" width="28" height="28">
+          <span>EcoCall</span>
+        </a>
+        <a href="javascript:void(0)" onclick="irParaHome()" class="mobile-back-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Início</span>
+        </a>
+      </div>
+
       <div class="form-tag">
         <svg width="7" height="7" viewBox="0 0 8 8">
           <circle cx="4" cy="4" r="4" fill="currentColor"/>

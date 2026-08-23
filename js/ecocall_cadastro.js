@@ -248,13 +248,16 @@
   function maskCNPJ(i)  { i.value = i.value.replace(/\D/g, '').slice(0, 14).replace(/(\d{2})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2'); }
 
   function showCadToast(msg, dur) {
-    dur = dur || 3000;
-    var t = document.getElementById('toast');
-    if (!t) return;
-    var msgEl = document.getElementById('tmsg');
-    if (msgEl) msgEl.textContent = msg;
-    t.classList.add('on');
-    setTimeout(function () { t.classList.remove('on'); }, dur);
+    if (window.toast) {
+      window.toast(msg, dur);
+    } else {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      var msgEl = document.getElementById('tmsg');
+      if (msgEl) msgEl.textContent = msg;
+      t.classList.add('on');
+      setTimeout(function () { t.classList.remove('on'); }, dur || 3000);
+    }
   }
 
   var redirectTarget = 'ecocall-dashbord_usuario.html';
@@ -293,7 +296,9 @@
       if (!email || !email.includes('@')) { showCadToast('⚠ Informe um e-mail válido.'); goStep(1); return; }
       if (pwd.length < 6) { showCadToast('⚠ A senha deve ter no mínimo 6 caracteres.'); goStep(1); return; }
       if (pwd !== pwd2) { showCadToast('⚠ As senhas não coincidem.'); goStep(1); return; }
-      if (termos && !termos.checked) { showCadToast('⚠ Você precisa aceitar os Termos de Uso.'); return; }
+      if (cpf && cpf.replace(/\D/g, '').length !== 11) { showCadToast('⚠ O CPF deve conter 11 dígitos.'); return; }
+      if (telefone && telefone.replace(/\D/g, '').length < 10) { showCadToast('⚠ Informe um número de telefone/WhatsApp válido.'); return; }
+      if (termos && !termos.checked) { showCadToast('⚠ Você precisa aceitar os Termos de Uso e Política de Privacidade.'); return; }
 
       payload.nome = (nome + ' ' + sobrenome).trim();
       payload.email = email;
@@ -331,8 +336,10 @@
       if (!emailEmp || !emailEmp.includes('@')) { showCadToast('⚠ Informe um e-mail corporativo válido.'); goStep(1); return; }
       if (pwdEmp.length < 6) { showCadToast('⚠ A senha deve ter no mínimo 6 caracteres.'); goStep(1); return; }
       if (pwdEmp !== pwdEmp2) { showCadToast('⚠ As senhas não coincidem.'); goStep(1); return; }
-      if (!cnpj) { showCadToast('⚠ Informe o CNPJ da empresa.'); return; }
-      if (termosEmp && !termosEmp.checked) { showCadToast('⚠ Você precisa aceitar os Termos e Condições.'); return; }
+      if (!razaoSocial) { showCadToast('⚠ Informe a Razão Social da empresa.'); return; }
+      if (!cnpj || cnpj.replace(/\D/g, '').length !== 14) { showCadToast('⚠ Informe um CNPJ válido com 14 dígitos.'); return; }
+      if (telefoneEmp && telefoneEmp.replace(/\D/g, '').length < 10) { showCadToast('⚠ Informe um número de telefone/WhatsApp válido.'); return; }
+      if (termosEmp && !termosEmp.checked) { showCadToast('⚠ Você precisa aceitar os Termos e Condições de Parceria.'); return; }
 
       payload.nome = razaoSocial || nomeEmp;
       payload.razao_social = razaoSocial || nomeEmp;
@@ -437,6 +444,35 @@
       });
       carregarCidades('user-uf', 'user-cidade', 'Santos');
     }
+
+    // Atalhos de tecla Enter nos formulários para avançar e submeter
+    var step1UserInps = document.querySelectorAll('#step1-user input');
+    step1UserInps.forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); goStep2(); }
+      });
+    });
+
+    var step1EmpInps = document.querySelectorAll('#step1-empresa input');
+    step1EmpInps.forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); goStep2Empresa(); }
+      });
+    });
+
+    var step2UserInps = document.querySelectorAll('#step2-user input');
+    step2UserInps.forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submeterCadastro('user'); }
+      });
+    });
+
+    var step2EmpInps = document.querySelectorAll('#step2-empresa input');
+    step2EmpInps.forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submeterCadastro('empresa'); }
+      });
+    });
   });
 
   window.irParaHome = irParaHome;

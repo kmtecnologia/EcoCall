@@ -27,19 +27,24 @@
     <div class="bblob bb2"></div>
   </div>
 
-  <nav>
-    <a href="#" onclick="irParaHome()" class="logo">
-      <div class="logo-mark">
-        <img src="img/logo-folha.png" alt="EcoCall" width="34" height="34">
+  <nav class="cad-nav">
+    <a href="javascript:void(0)" onclick="irParaHome()" class="cad-logo" title="EcoCall — Início">
+      <div class="cad-logo-icon">
+        <img src="img/logo-folha.png" alt="EcoCall">
       </div>
-      <div>
-        <div class="logo-name">EcoCall</div>
-        <div class="logo-tag">Resíduos coletados, mundo preservado</div>
+      <div class="cad-logo-stack">
+        <span class="cad-logo-name">EcoCall</span>
+        <span class="cad-logo-tag">Resíduos coletados, mundo preservado</span>
       </div>
     </a>
-    <div class="nav-r">
-      <span>Já tem conta?</span>
-      <a href="#" onclick="irParaLogin()">Entrar</a>
+    <div class="cad-nav-r">
+      <button type="button" onclick="irParaHome()" class="btn-voltar-home" title="Voltar para a página inicial">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Voltar ao Início</span>
+      </button>
     </div>
   </nav>
 
@@ -167,7 +172,7 @@
             Microsoft
           </button>
         </div>
-        <p class="login-link">Já tem conta? <a href="#" onclick="irParaLogin()">Entrar</a></p>
+        <p class="login-link">Já tem conta? <a href="javascript:void(0)" onclick="irParaLogin()">Entrar</a></p>
         <div class="sec-note">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Conexão criptografada · SSL 256-bit
@@ -220,7 +225,7 @@
             Microsoft
           </button>
         </div>
-        <p class="login-link">Já tem conta? <a href="#" onclick="irParaLogin()">Entrar</a></p>
+        <p class="login-link">Já tem conta? <a href="javascript:void(0)" onclick="irParaLogin()">Entrar</a></p>
         <div class="sec-note">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Conexão criptografada · SSL 256-bit
@@ -329,10 +334,10 @@
             </div></div>
         </div>
 
-        <div class="terms"><input type="checkbox" id="t1"><label for="t1">Li e concordo com os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a></label></div>
+        <div class="terms"><input type="checkbox" id="t1"><label for="t1">Li e concordo com os <a href="javascript:void(0)" onclick="toast('Termos de Uso da EcoCall', 'info')">Termos de Uso</a> e a <a href="javascript:void(0)" onclick="toast('Política de Privacidade e Proteção de Dados LGPD', 'info')">Política de Privacidade</a></label></div>
         <div class="btn-row">
-          <button class="btn-back" onclick="goStep(1)">← Voltar</button>
-          <button class="btn-submit btn-flex" id="btn-user-submit" onclick="submeterCadastro('user')">Criar conta →</button>
+          <button class="btn-back" type="button" onclick="goStep(1)">← Voltar</button>
+          <button class="btn-submit btn-flex" type="button" id="btn-user-submit" onclick="submeterCadastro('user')">Criar conta →</button>
         </div>
       </div>
 
@@ -451,10 +456,10 @@
             </select>
             <svg class="fic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
           </div></div>
-        <div class="terms"><input type="checkbox" id="t-emp"><label for="t-emp">Concordo com os <a href="#">Termos e Condições</a> de Parceria</label></div>
+        <div class="terms"><input type="checkbox" id="t-emp"><label for="t-emp">Concordo com os <a href="javascript:void(0)" onclick="toast('Termos e Condições de Parceria Corporativa', 'info')">Termos e Condições</a> de Parceria</label></div>
         <div class="btn-row">
-          <button class="btn-back" onclick="goStep(1)">← Voltar</button>
-          <button class="btn-submit btn-flex" id="btn-emp-submit" onclick="submeterCadastro('empresa')">Cadastrar Empresa →</button>
+          <button class="btn-back" type="button" onclick="goStep(1)">← Voltar</button>
+          <button class="btn-submit btn-flex" type="button" id="btn-emp-submit" onclick="submeterCadastro('empresa')">Cadastrar Empresa →</button>
         </div>
       </div>
 

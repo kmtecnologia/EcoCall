@@ -16,9 +16,11 @@ if ($tipoUser === 'empresa') {
 
     // Coletas atribuídas à empresa ou pendentes globais
     $stmt = $pdo->prepare("
-        SELECT c.*, u.nome as cliente_nome, u.telefone as cliente_telefone, u.email as cliente_email
+        SELECT c.*, u.nome as cliente_nome, u.telefone as cliente_telefone, u.email as cliente_email,
+               av.id as avaliacao_id, av.nota as avaliacao_nota, av.comentario as avaliacao_comentario
         FROM coletas c
         JOIN usuarios u ON c.usuario_id = u.id
+        LEFT JOIN avaliacoes av ON c.id = av.coleta_id
         WHERE c.empresa_id = :empresa_id OR (c.status = 'pendente' AND c.empresa_id IS NULL)
         ORDER BY c.data_agendada DESC, c.id DESC
     ");
@@ -26,9 +28,11 @@ if ($tipoUser === 'empresa') {
 } else {
     // Coletas solicitadas pelo usuário cidadão
     $stmt = $pdo->prepare("
-        SELECT c.*, e.razao_social as empresa_nome, e.categoria as empresa_categoria
+        SELECT c.*, e.razao_social as empresa_nome, e.categoria as empresa_categoria,
+               av.id as avaliacao_id, av.nota as avaliacao_nota, av.comentario as avaliacao_comentario
         FROM coletas c
         LEFT JOIN empresas e ON c.empresa_id = e.id
+        LEFT JOIN avaliacoes av ON c.id = av.coleta_id
         WHERE c.usuario_id = :usuario_id
         ORDER BY c.data_agendada DESC, c.id DESC
     ");

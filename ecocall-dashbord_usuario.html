@@ -24,6 +24,9 @@
 
   <div class="dash-layout">
 
+    <!-- Overlay para fechar gaveta mobile no toque fora -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
     <!-- ─── SIDEBAR LATERAL NATIVA ─── -->
     <aside class="sidebar">
       <a href="javascript:void(0)" class="logo" onclick="switchUserTab('dash')">
@@ -82,9 +85,14 @@
       
       <!-- TOPBAR DINÂMICA -->
       <header class="topbar">
-        <div class="topbar-welcome">
-          <h1 id="dash-greeting">Olá 👋</h1>
-          <p id="dash-topbar-sub">Gere e acompanhe as suas contribuições sustentáveis.</p>
+        <div style="display:flex;align-items:center;gap:0.85rem;">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleMobileSidebar()" aria-label="Abrir Menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="topbar-welcome">
+            <h1 id="dash-greeting">Olá 👋</h1>
+            <p id="dash-topbar-sub">Gere e acompanhe as suas contribuições sustentáveis.</p>
+          </div>
         </div>
         
         <div class="topbar-right">
@@ -813,7 +821,7 @@
 
   <!-- Modal de Avaliação de Coletas Concluídas -->
   <div class="modal-overlay" id="eval-overlay" onclick="closeEvalModal()"></div>
-  <div class="request-modal" id="eval-modal" style="max-width:480px;">
+  <div class="request-modal" id="eval-modal" style="max-width:500px;">
     <div class="modal-header">
       <div class="modal-title-group">
         <h3>Avaliar Coleta Seletiva ⭐</h3>
@@ -823,16 +831,35 @@
     </div>
     <div class="modal-body" style="padding:1.5rem;">
       <input type="hidden" id="eval-coleta-id">
-      <div style="text-align:center;margin-bottom:1.2rem;">
-        <div style="font-size:0.95rem;color:var(--text-dark);font-weight:600;margin-bottom:0.5rem;" id="eval-empresa-name">Empresa Parceira</div>
-        <div id="eval-stars-picker" style="font-size:2.2rem;cursor:pointer;color:#f59e0b;user-select:none;letter-spacing:4px;">
-          <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
-        </div>
-        <div style="font-size:0.85rem;font-weight:600;color:var(--brand-green-hover);margin-top:4px;" id="eval-rating-lbl">5 estrelas (Excelente)</div>
+      
+      <!-- Banner de Recompensa em Ecopontos -->
+      <div style="display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 12px;margin-bottom:1.2rem;font-size:0.82rem;color:#15803d;">
+        <span style="font-size:1.1rem;">🎁</span>
+        <span><strong>Ganhe +10 Ecopontos</strong> creditados na sua conta ao enviar sua avaliação sincera!</span>
       </div>
+
+      <div style="text-align:center;margin-bottom:1.2rem;">
+        <div style="font-size:0.95rem;color:var(--text-dark);font-weight:700;margin-bottom:0.4rem;" id="eval-empresa-name">Empresa Parceira</div>
+        <div id="eval-stars-picker" style="font-size:2.4rem;cursor:pointer;color:#f59e0b;user-select:none;letter-spacing:6px;transition:transform 0.15s;">
+          <span onclick="setRating(1)" onmouseover="previewRating(1)" onmouseout="restoreRating()">★</span><span onclick="setRating(2)" onmouseover="previewRating(2)" onmouseout="restoreRating()">★</span><span onclick="setRating(3)" onmouseover="previewRating(3)" onmouseout="restoreRating()">★</span><span onclick="setRating(4)" onmouseover="previewRating(4)" onmouseout="restoreRating()">★</span><span onclick="setRating(5)" onmouseover="previewRating(5)" onmouseout="restoreRating()">★</span>
+        </div>
+        <div style="font-size:0.88rem;font-weight:700;color:var(--brand-green-hover);margin-top:4px;" id="eval-rating-lbl">5 estrelas (Excelente! 🌟)</div>
+      </div>
+
+      <!-- Pílulas de Elogios Rápidos -->
+      <div style="margin-bottom:1.2rem;">
+        <label style="display:block;font-size:0.78rem;font-weight:600;color:var(--text-grey);margin-bottom:6px;">O que se destacou no atendimento? (Clique para adicionar)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;" id="eval-praise-tags">
+          <button type="button" class="tag-praise" onclick="adicionarElogioAoComentario('⚡ Pontualidade na retirada')">⚡ Pontualidade</button>
+          <button type="button" class="tag-praise" onclick="adicionarElogioAoComentario('🤝 Atendimento super cordial e prestativo')">🤝 Cordialidade</button>
+          <button type="button" class="tag-praise" onclick="adicionarElogioAoComentario('🧹 Local deixado perfeitamente limpo')">🧹 Cuidado com o local</button>
+          <button type="button" class="tag-praise" onclick="adicionarElogioAoComentario('📦 Pesagem transparente e ágil')">📦 Pesagem transparente</button>
+        </div>
+      </div>
+
       <div class="req-field">
-        <label class="req-label">Seu Comentário / Experiência</label>
-        <textarea id="eval-comment" rows="3" placeholder="Conte como foi a pontualidade, atendimento e recolhimento dos resíduos..."></textarea>
+        <label class="req-label">Seu Comentário / Experiência (Opcional)</label>
+        <textarea id="eval-comment" rows="3" placeholder="Conte como foi o atendimento da equipe da cooperativa..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -845,7 +872,6 @@
   <div class="toast" id="tst"><div class="tdot"></div><span id="tmsg"></span></div>
 
   <!-- Inicializadores de Script & Leaflet Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/core.js"></script>
   <script src="js/ecocall-dashboard.js"></script>
